@@ -288,7 +288,7 @@ class Test2DocReporter implements Reporter {
       let worst: "." | "S" | "P" | "F" = "."
       for (let i = start; i < end; i++) {
         const result = this.testResults[i]
-        if (rank[result] > rank[worst]) {
+        if (result !== undefined && rank[result] > rank[worst]) {
           worst = result
         }
       }
