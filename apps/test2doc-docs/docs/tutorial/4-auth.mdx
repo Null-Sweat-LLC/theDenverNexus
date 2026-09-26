@@ -33,7 +33,7 @@ Passkey authentication offers several key advantages:
 ## Setup the Passkey
 Since we're using RedwoodSDK it has a Passkey Addon to help with authentication.
 
-So the Redwood team created a package that is designed to give instructions to a coding agent to install their addon. So if you're using VSCode, you can use [Co-pilot's](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot-chat) or [Cursor's](https://cursor.com/docs/agent/modes#agent) Agent mode to handle the installation of the Passkey addon.
+So the Redwood team created a package that is designed to give instructions to a coding agent to install their addon. So you can have a coding agent like [Claude Code](https://code.claude.com/docs/en/overview) or [Codex](https://github.com/openai/codex) handle the installation of the Passkey addon. If you're using VSCode, [Copilot's](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot-chat) or [Cursor's](https://cursor.com/docs/agent/overview) Agent mode work too.
 
 All you need to do is tell it to execute `npx rwsdk addon passkey` and follow the `INSTRUCTIONS.md` that's downloaded. Or you can also just run the command and do it yourself.
 ```sh
@@ -448,7 +448,7 @@ import { test, expect } from "@playwright/test"
 import { randomUUID } from "crypto"
 
 test.describe("Authentication Flow", () => {
-  const username = `testuser-${crypto.randomUUID()}`
+  const username = `testuser-${randomUUID()}`
   test("Register a new user", async ({ page }) => {
     await test.step("On the sign up page at `/auth/signup`.", async () => {
       await page.goto("auth/signup")
@@ -569,88 +569,26 @@ If you run the test now, you might expect it to pass, since we copied the functi
 But you'll probably see this error in the test.
 ![A screenshot of the Registration page with an error message](./images/playwright-passkey-error.png)
 
-You'll see the error is "Registration error: No available authenticator supported any of the specified pubKeyCredParams algorithms". The problem is that Playwright doesn't have access to generate passkeys on its own. So we'll need to enable WebAuthn virtual authenticator.
+You'll see the error is "Registration error: No available authenticator supported any of the specified pubKeyCredParams algorithms". The problem is that the browser Playwright runs doesn't have a passkey authenticator, like Touch ID, Windows Hello or a password manager, so there's nothing to create the passkey. So we'll need to give it a virtual one.
 
-**Mocking WebAuthn**
+**Virtual Authenticator**
 
-Often times relying on dependencies makes testing hard, so many times the easiest solution is to simply mock out the WebAuthn API. Which is not a _bad_ solution. However, to have more confidence in our tests and implementation, we should attempt to avoid mocks if possible.
+Playwright (version 1.61 and newer) has a built-in virtual authenticator for this, [`context.credentials`](https://playwright.dev/docs/api/class-credentials). It stands in for the device that stores the passkey, and nothing else: our app's code, and the signature checks our server does on every registration and login, still run for real.
 
-**Helper Utility**
+The virtual authenticator belongs to the [browser context](https://playwright.dev/docs/api/class-browsercontext), which is like a fresh browser profile. We get the context with `page.context()`, and it has 2 methods we'll use:
 
-There are a few challenges for using Passkeys in Playwright. The first one is we need to prompt the WebAuthn when a Passkey is requested. Luckily [Corbado has already figured out](https://www.corbado.com/blog/passkeys-e2e-playwright-testing-webauthn-virtual-authenticator#612-approach-2-manual-simulation-with-automaticpresencesimulation-set-to-false) a way to do so. So we'll copy their code.
+- `credentials.install()` turns on the virtual authenticator. It has to be called before the page asks for a passkey.
+- `credentials.get()` returns the passkeys the virtual authenticator is holding, so we can check that registration created one.
 
-```ts title="tests/util.ts"
-import type { CDPSession } from "@playwright/test"
-
-export async function simulateSuccessfulPasskeyInput(
-  client: CDPSession,
-  authenticatorId: string,
-  operationTrigger: () => Promise<void>,
-) {
-  // initialize event listeners to wait for a successful passkey input event
-  const operationCompleted = new Promise<void>((resolve) => {
-    client.on("WebAuthn.credentialAdded", () => resolve())
-    client.on("WebAuthn.credentialAsserted", () => resolve())
-  })
-
-  // set isUserVerified option to true
-  // (so that subsequent passkey operations will be successful)
-  await client.send("WebAuthn.setUserVerified", {
-    authenticatorId: authenticatorId,
-    isUserVerified: true,
-  })
-
-  // set automaticPresenceSimulation option to true
-  // (so that the virtual authenticator will respond to the next passkey prompt)
-  await client.send("WebAuthn.setAutomaticPresenceSimulation", {
-    authenticatorId: authenticatorId,
-    enabled: true,
-  })
-
-  // perform a user action that triggers passkey prompt
-  await operationTrigger()
-
-  // wait to receive the event that the passkey was successfully registered or verified
-  await operationCompleted
-
-  // set automaticPresenceSimulation option back to false
-  await client.send("WebAuthn.setAutomaticPresenceSimulation", {
-    authenticatorId,
-    enabled: false,
-  })
-}
-```
-
-**Enable WebAuthn virtual authenticator**
-
-Next we'll need to enable the `WebAuthn` in our test.
-
-```ts title="tests/authentication.spec.ts" {3,8-26,33-36,44-51,57-60}
-import { test, expect, CDPSession } from "@playwright/test"
+```ts title="tests/authentication.spec.ts" {7-9,16,30}
+import { test, expect } from "@playwright/test"
 import { randomUUID } from "crypto"
-import { simulateSuccessfulPasskeyInput } from "./util"
 
 test.describe("Authentication Flow", () => {
-  const username = `testuser-${crypto.randomUUID()}`
+  const username = `testuser-${randomUUID()}`
   test("Register a new user", async ({ page }) => {
-    let client: CDPSession
-    let authenticatorId: string
     await test.step("Set up WebAuthn virtual authenticator.", async () => {
-      client = await page.context().newCDPSession(page)
-      await client.send("WebAuthn.enable")
-
-      const result = await client.send("WebAuthn.addVirtualAuthenticator", {
-        options: {
-          protocol: "ctap2",
-          transport: "internal",
-          hasResidentKey: true,
-          hasUserVerification: true,
-          isUserVerified: true,
-          automaticPresenceSimulation: true,
-        },
-      })
-
-      authenticatorId = result.authenticatorId
+      await page.context().credentials.install()
     })
 
     await test.step("On the sign up page at `/auth/signup`.", async () => {
@@ -658,10 +596,7 @@ test.describe("Authentication Flow", () => {
 
       await expect(page.getByRole("heading", { name: "Sign up" })).toBeVisible()
 
-      const result = await client.send("WebAuthn.getCredentials", {
-        authenticatorId,
-      })
-      expect(result.credentials).toHaveLength(0)
+      expect(await page.context().credentials.get()).toHaveLength(0)
     })
 
     await test.step("Filling out the registration form.", async () => {
@@ -669,53 +604,19 @@ test.describe("Authentication Flow", () => {
     })
 
     await test.step("Submitting the registration form.", async () => {
-      await simulateSuccessfulPasskeyInput(
-        client,
-        authenticatorId,
-        async () =>
-          await page
-            .getByRole("button", { name: "Register with passkey" })
-            .click(),
-      )
+      await page.getByRole("button", { name: "Register with passkey" }).click()
     })
 
     await test.step("Verifying successful registration.", async () => {
       await expect(page.getByText("Registration successful!")).toBeVisible()
 
-      const result = await client.send("WebAuthn.getCredentials", {
-        authenticatorId,
-      })
-      expect(result.credentials).toHaveLength(1)
+      expect(await page.context().credentials.get()).toHaveLength(1)
     })
   })
 })
 ```
 
-After this, your test should pass! In Chrome...only...
-
-![A screenshot of Playwright UI with a test passing in Chrome but failing in Firefox and Safari.](./images/playwright-passkey-CDP.png)
-
-Currently (as of writing in 2025) there is no way to turn on WebAuthn for Firefox or Safari in Playwright. Those browsers support it for users, just not for automation.
-
-So, since we currently cannot test in Firefox and Safari, we're just going to disable them for right now. But we should still have very high confidence that our site will work across browsers. JS support is very strong and consistent between the browsers, just not the cutting edge like WebAuthn. Sometimes when you're on the cutting edge, you bleed a bit.
-
-```diff title="playwright.config.ts"
-projects: [
-    {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
-    },
--
--     {
--       name: "firefox",
--       use: { ...devices["Desktop Firefox"] },
--     },
--
--     {
--       name: "webkit",
--       use: { ...devices["Desktop Safari"] },
--     },
-```
+After this, your test should pass! And not just in Chrome: the virtual authenticator works in Chromium, Firefox and WebKit (Safari's browser engine), so we can keep testing in all 3 browsers.
 
 #### Refactor Registration
 If you start Playwright fresh, you might notice that the first test hangs sometimes, but it should pass in subsequent runs.
@@ -809,10 +710,7 @@ The last thing we'll need (for now), after we successfully register a new user, 
 +await test.step("Verifying successful registration and redirect to login page", async () => {
 +  await expect(page.getByRole("heading", { name: "YOLO" })).toBeVisible()
 
-  const result = await client.send("WebAuthn.getCredentials", {
-    authenticatorId,
-  })
-  expect(result.credentials).toHaveLength(1)
+  expect(await page.context().credentials.get()).toHaveLength(1)
 })
 ```
 
@@ -908,7 +806,7 @@ Go to http://localhost:3000/docs/test2doc-authentication-flow and you should see
 
 ![A screenshot of Docusaurus with the a doc page generated from the tests.](./images/docusaurus-authflow-initial.png)
 
-It's very basic. Has out describe block as an h1, and test title for h2. With a paragraph of our step blocks.
+It's very basic. Has our describe block as an h1, and test title for h2. With a paragraph of our step blocks.
 
 To make this a bit more helpful, we'll need to use a few helper methods from the `@test2doc/playwright` package and incorporate that into our tests.
 
@@ -918,10 +816,9 @@ We'll add:
 - Screenshots
 - Front matter metadata to render in the sidebar
 
-```ts {7,10,16,41,55-73,87-89}
-import { test, expect, CDPSession } from "@playwright/test"
+```ts {6,9,13,24,35-53,62-64}
+import { test, expect } from "@playwright/test"
 import { randomUUID } from "crypto"
-import { simulateSuccessfulPasskeyInput } from "./util"
 import { withDocMeta } from "@test2doc/playwright/DocMeta"
 import { screenshot } from "@test2doc/playwright/screenshots"
 
@@ -930,26 +827,10 @@ const clip = { x: 0, y: 0, width: 550, height: 200 }
 test.describe(
   withDocMeta("Authentication Flow", { sidebar_position: 1 }),
   () => {
-  const username = `testuser-${crypto.randomUUID()}`
+    const username = `testuser-${randomUUID()}`
     test("Register a new user", async ({ page }, testInfo) => {
-      let client: CDPSession
-      let authenticatorId: string
       await test.step("We support [Passkeys](https://docs.github.com/en/authentication/authenticating-with-a-passkey/about-passkeys) by [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn).\n\n", async () => {
-        client = await page.context().newCDPSession(page)
-        await client.send("WebAuthn.enable")
-
-        const result = await client.send("WebAuthn.addVirtualAuthenticator", {
-          options: {
-            protocol: "ctap2",
-            transport: "internal",
-            hasResidentKey: true,
-            hasUserVerification: true,
-            isUserVerified: true,
-            automaticPresenceSimulation: true,
-          },
-        })
-
-        authenticatorId = result.authenticatorId
+        await page.context().credentials.install()
       })
 
       await test.step("To get started with registration, goto the sign up page at `/auth/signup`.", async () => {
@@ -961,10 +842,7 @@ test.describe(
 
         await screenshot(testInfo, page, { clip })
 
-        const result = await client.send("WebAuthn.getCredentials", {
-          authenticatorId,
-        })
-        expect(result.credentials).toHaveLength(0)
+        expect(await page.context().credentials.get()).toHaveLength(0)
       })
 
       await test.step("\n\nFilling out the registration form and ", async () => {
@@ -992,14 +870,9 @@ test.describe(
             clip,
           },
         )
-        await simulateSuccessfulPasskeyInput(
-          client,
-          authenticatorId,
-          async () =>
-            await page
-              .getByRole("button", { name: "Register with passkey" })
-              .click(),
-        )
+        await page
+          .getByRole("button", { name: "Register with passkey" })
+          .click()
       })
 
       await test.step("\n\nOn successful registration you will be redirect to login page.", async () => {
@@ -1009,10 +882,7 @@ test.describe(
           clip,
         })
 
-        const result = await client.send("WebAuthn.getCredentials", {
-          authenticatorId,
-        })
-        expect(result.credentials).toHaveLength(1)
+        expect(await page.context().credentials.get()).toHaveLength(1)
       })
     })
   },
@@ -1086,24 +956,8 @@ After we register a new user, we'll need to reuse the same passkey that we gener
 
 ```ts title="tests/authentication.spec.ts"
 test("Login with existing user", async ({ page }, testInfo) => {
-  let client: CDPSession
-  let authenticatorId: string
   await test.step("Setup WebAuthn virtual authenticator.\n\n", async () => {
-    client = await page.context().newCDPSession(page)
-    await client.send("WebAuthn.enable")
-
-    const result = await client.send("WebAuthn.addVirtualAuthenticator", {
-      options: {
-        protocol: "ctap2",
-        transport: "internal",
-        hasResidentKey: true,
-        hasUserVerification: true,
-        isUserVerified: true,
-        automaticPresenceSimulation: true,
-      },
-    })
-
-    authenticatorId = result.authenticatorId
+    await page.context().credentials.install()
   })
 
   await test.step("While on the login page at `/auth/login`.\n\n", async () => {
@@ -1123,14 +977,7 @@ test("Login with existing user", async ({ page }, testInfo) => {
         clip,
       },
     )
-    await simulateSuccessfulPasskeyInput(
-      client,
-      authenticatorId,
-      async () =>
-        await page
-          .getByRole("button", { name: "Login with passkey" })
-          .click(),
-    )
+    await page.getByRole("button", { name: "Login with passkey" }).click()
   })
 
   await test.step("\n\nOn successful login you will see a success message.\n\n", async () => {
@@ -1143,18 +990,11 @@ test("Login with existing user", async ({ page }, testInfo) => {
 })
 ```
 
-Now, if you run the test, you'll notice it fails. Because each test runs in isolation we don't have access to the previous Passkey. We'll need to come up with a way to share the passkey between tests. We can do this by sharing the browser context between runs, and we'll need to make sure that the tests run in order.
+Now, if you run the test, you'll notice it fails. Because each test runs in isolation, each one gets its own browser context, and the passkey from registration lives in the registration test's context. We'll need to come up with a way to share the passkey between tests. We can do this by sharing the browser context between tests, and we'll need to make sure that the tests run in order.
 
-```ts title="tests/authentication.spec.ts" {15,19-33,37,55,58,61,70,81,85,100,108,111,124,127,130,136,146,153,155}
-import {
-  test,
-  expect,
-  CDPSession,
-  Page,
-  BrowserContext,
-} from "@playwright/test"
+```ts title="tests/authentication.spec.ts" {1,8,12-23,27,31,34,37,39,43,54,58,69-71,76,79,83,89,92,95,101,107-109,113,115}
+import { test, expect, Page, BrowserContext } from "@playwright/test"
 import { randomUUID } from "crypto"
-import { simulateSuccessfulPasskeyInput } from "./util"
 import { withDocMeta } from "@test2doc/playwright/DocMeta"
 import { screenshot } from "@test2doc/playwright/screenshots"
 
@@ -1163,9 +1003,7 @@ const clip = { x: 0, y: 0, width: 550, height: 200 }
 test.describe.serial(
   withDocMeta("Authentication Flow", { sidebar_position: 1 }),
   () => {
-  const username = `testuser-${crypto.randomUUID()}`
-    let client: CDPSession
-    let authenticatorId: string
+    const username = `testuser-${randomUUID()}`
     let sharedContext: BrowserContext
     let sharedPage: Page
 
@@ -1176,27 +1014,12 @@ test.describe.serial(
     })
 
     test.afterAll(async () => {
-      await client?.detach()
       await sharedContext?.close()
     })
 
     test("Register a new user", async ({}, testInfo) => {
       await test.step("We support [Passkeys](https://docs.github.com/en/authentication/authenticating-with-a-passkey/about-passkeys) by [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn).\n\n", async () => {
-        client = await sharedPage.context().newCDPSession(sharedPage)
-        await client.send("WebAuthn.enable")
-
-        const result = await client.send("WebAuthn.addVirtualAuthenticator", {
-          options: {
-            protocol: "ctap2",
-            transport: "internal",
-            hasResidentKey: true,
-            hasUserVerification: true,
-            isUserVerified: true,
-            automaticPresenceSimulation: true,
-          },
-        })
-
-        authenticatorId = result.authenticatorId
+        await sharedContext.credentials.install()
       })
 
       await test.step("To get started with registration, goto the sign up page at `/auth/signup`.", async () => {
@@ -1208,10 +1031,7 @@ test.describe.serial(
 
         await screenshot(testInfo, sharedPage, { clip })
 
-        const result = await client.send("WebAuthn.getCredentials", {
-          authenticatorId,
-        })
-        expect(result.credentials).toHaveLength(0)
+        expect(await sharedContext.credentials.get()).toHaveLength(0)
       })
 
       await test.step("\n\nFilling out the registration form and ", async () => {
@@ -1241,14 +1061,9 @@ test.describe.serial(
             clip,
           },
         )
-        await simulateSuccessfulPasskeyInput(
-          client,
-          authenticatorId,
-          async () =>
-            await sharedPage
-              .getByRole("button", { name: "Register with passkey" })
-              .click(),
-        )
+        await sharedPage
+          .getByRole("button", { name: "Register with passkey" })
+          .click()
       })
 
       await test.step("\n\nOn successful registration you will be redirect to login page.", async () => {
@@ -1260,10 +1075,7 @@ test.describe.serial(
           clip,
         })
 
-        const result = await client.send("WebAuthn.getCredentials", {
-          authenticatorId,
-        })
-        expect(result.credentials).toHaveLength(1)
+        expect(await sharedContext.credentials.get()).toHaveLength(1)
       })
     })
 
@@ -1287,14 +1099,9 @@ test.describe.serial(
             clip,
           },
         )
-        await simulateSuccessfulPasskeyInput(
-          client,
-          authenticatorId,
-          async () =>
-            await sharedPage
-              .getByRole("button", { name: "Login with passkey" })
-              .click(),
-        )
+        await sharedPage
+          .getByRole("button", { name: "Login with passkey" })
+          .click()
       })
 
       await test.step("\n\nOn successful login you will see a success message.\n\n", async () => {
@@ -1311,7 +1118,7 @@ test.describe.serial(
 
 First thing we need to do is setup the `describe` block to run the test in order with the `.serial` method.
 
-So, you'll notice that we moved `client` and `authenticatorId` to the root describe block and added `sharedContext` and `sharedPage`. Then we setup our `beforeAll` and `afterAll` to setup the sharing of the browser context between our tests. Then we swapped out all the `page` variables with `sharedPage`. And I removed the `step` where we setup WebAuthn in the login test as it is no longer needed. And we're done.
+So, you'll notice that we added `sharedContext` and `sharedPage` to the root describe block. Then we setup our `beforeAll` and `afterAll` to setup the sharing of the browser context between our tests. Then we swapped out all the `page` variables with `sharedPage`, and `page.context()` with `sharedContext`. Since the virtual authenticator belongs to the context, installing it once in the registration test is enough, so I removed the `step` where we set up WebAuthn in the login test. And we're done.
 
 Now we can reuse the passkey from registration in the login test.
 
@@ -1978,7 +1785,7 @@ Now, we can jump over to our `Login` component and style it.
 
 Let's update our test first. We'll be changing the **YOLO** header to **Login**, so we'll reflect that first.
 
-```ts title="" {4,23}
+```ts title="" {4,20}
 ...
 await test.step("\n\nOn successful registration you will be redirect to login page.", async () => {
     await expect(
@@ -1989,10 +1796,7 @@ await test.step("\n\nOn successful registration you will be redirect to login pa
       clip,
     })
 
-    const result = await client.send("WebAuthn.getCredentials", {
-      authenticatorId,
-    })
-    expect(result.credentials).toHaveLength(1)
+    expect(await sharedContext.credentials.get()).toHaveLength(1)
   })
 })
 
@@ -2606,8 +2410,8 @@ There are a few options we can use to solve this problem. [Page object models](h
 So I'm going to recommend a medium level of abstraction in creating a `Selector Tuple` object. Which will, simply put, be an object with tuple selectors values that we can pass to a locator to select an element on the DOM.
 
 ```ts title="tests/util.ts" {3-16}
-import type { CDPSession, Page } from "@playwright/test"
-...
+import type { Page } from "@playwright/test"
+
 export const selectors = {
   headingSignup: ["heading", { name: "Create an Account" }],
   headingLogin: ["heading", { name: "Login" }],
@@ -2637,16 +2441,10 @@ await expect(
 <details>
 <summary>Updated `tests/authentication.spec.ts` code</summary>
 
-```ts title="tests/authentication.spec.ts" {9,58,70,79,83,95,101,120,129,139,145,168,179,189,200,220,227,242,249}
-import {
-  test,
-  expect,
-  CDPSession,
-  Page,
-  BrowserContext,
-} from "@playwright/test"
+```ts title="tests/authentication.spec.ts" {3,35,44,53,57,65,70,86,95,101,106,129,140,150,161,181,188,203,210}
+import { test, expect, Page, BrowserContext } from "@playwright/test"
 import { randomUUID } from "crypto"
-import { selectors, simulateSuccessfulPasskeyInput } from "./util"
+import { selectors } from "./util"
 import { withDocCategory, withDocMeta } from "@test2doc/playwright/DocMeta"
 import { screenshot } from "@test2doc/playwright/screenshots"
 
@@ -2655,9 +2453,7 @@ const clip = { x: 0, y: 0, width: 550, height: 200 }
 test.describe.serial(
   withDocMeta("Authentication Flow", { sidebar_position: 1 }),
   () => {
-  const username = `testuser-${crypto.randomUUID()}`
-    let client: CDPSession
-    let authenticatorId: string
+    const username = `testuser-${randomUUID()}`
     let sharedContext: BrowserContext
     let sharedPage: Page
 
@@ -2668,27 +2464,12 @@ test.describe.serial(
     })
 
     test.afterAll(async () => {
-      await client?.detach()
       await sharedContext?.close()
     })
 
     test("Register a new user", async ({}, testInfo) => {
       await test.step("We support [Passkeys](https://docs.github.com/en/authentication/authenticating-with-a-passkey/about-passkeys) by [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn).\n\n", async () => {
-        client = await sharedPage.context().newCDPSession(sharedPage)
-        await client.send("WebAuthn.enable")
-
-        const result = await client.send("WebAuthn.addVirtualAuthenticator", {
-          options: {
-            protocol: "ctap2",
-            transport: "internal",
-            hasResidentKey: true,
-            hasUserVerification: true,
-            isUserVerified: true,
-            automaticPresenceSimulation: true,
-          },
-        })
-
-        authenticatorId = result.authenticatorId
+        await sharedContext.credentials.install()
       })
 
       await test.step("To get started with registration, goto the sign up page at `/auth/signup`.", async () => {
@@ -2700,10 +2481,7 @@ test.describe.serial(
 
         await screenshot(testInfo, sharedPage, { clip })
 
-        const result = await client.send("WebAuthn.getCredentials", {
-          authenticatorId,
-        })
-        expect(result.credentials).toHaveLength(0)
+        expect(await sharedContext.credentials.get()).toHaveLength(0)
       })
 
       await test.step("\n\nFilling out the registration form and ", async () => {
@@ -2728,12 +2506,7 @@ test.describe.serial(
             clip,
           },
         )
-        await simulateSuccessfulPasskeyInput(
-          client,
-          authenticatorId,
-          async () =>
-            await sharedPage.getByRole(...selectors.buttonRegister).click(),
-        )
+        await sharedPage.getByRole(...selectors.buttonRegister).click()
       })
 
       await test.step("\n\nOn successful registration you will be redirect to login page.", async () => {
@@ -2745,10 +2518,7 @@ test.describe.serial(
           clip,
         })
 
-        const result = await client.send("WebAuthn.getCredentials", {
-          authenticatorId,
-        })
-        expect(result.credentials).toHaveLength(1)
+        expect(await sharedContext.credentials.get()).toHaveLength(1)
       })
     })
 
@@ -2772,12 +2542,7 @@ test.describe.serial(
             clip,
           },
         )
-        await simulateSuccessfulPasskeyInput(
-          client,
-          authenticatorId,
-          async () =>
-            await sharedPage.getByRole(...selectors.buttonLogin).click(),
-        )
+        await sharedPage.getByRole(...selectors.buttonLogin).click()
       })
 
       await test.step("\n\nOn successful login you will be taken to the applications page.\n\n", async () => {
@@ -3037,24 +2802,16 @@ We need to remove the `clip` options from our test as it is no longer of use.
 <summary>Updated final test spec for `tests/authentication.spec.ts`</summary>
 
 ```ts title="tests/authentication.spec.ts"
-import {
-  test,
-  expect,
-  CDPSession,
-  Page,
-  BrowserContext,
-} from "@playwright/test"
+import { test, expect, Page, BrowserContext } from "@playwright/test"
 import { randomUUID } from "crypto"
-import { selectors, simulateSuccessfulPasskeyInput } from "./util"
+import { selectors } from "./util"
 import { withDocCategory, withDocMeta } from "@test2doc/playwright/DocMeta"
 import { screenshot } from "@test2doc/playwright/screenshots"
 
 test.describe.serial(
   withDocMeta("Authentication Flow", { sidebar_position: 1 }),
   () => {
-  const username = `testuser-${crypto.randomUUID()}`
-    let client: CDPSession
-    let authenticatorId: string
+    const username = `testuser-${randomUUID()}`
     let sharedContext: BrowserContext
     let sharedPage: Page
 
@@ -3065,27 +2822,12 @@ test.describe.serial(
     })
 
     test.afterAll(async () => {
-      await client?.detach()
       await sharedContext?.close()
     })
 
     test("Register a new user", async ({}, testInfo) => {
       await test.step("We support [Passkeys](https://docs.github.com/en/authentication/authenticating-with-a-passkey/about-passkeys) by [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn).\n\n", async () => {
-        client = await sharedPage.context().newCDPSession(sharedPage)
-        await client.send("WebAuthn.enable")
-
-        const result = await client.send("WebAuthn.addVirtualAuthenticator", {
-          options: {
-            protocol: "ctap2",
-            transport: "internal",
-            hasResidentKey: true,
-            hasUserVerification: true,
-            isUserVerified: true,
-            automaticPresenceSimulation: true,
-          },
-        })
-
-        authenticatorId = result.authenticatorId
+        await sharedContext.credentials.install()
       })
 
       await test.step("To get started with registration, goto the sign up page at `/auth/signup`.", async () => {
@@ -3097,10 +2839,7 @@ test.describe.serial(
 
         await screenshot(testInfo, sharedPage)
 
-        const result = await client.send("WebAuthn.getCredentials", {
-          authenticatorId,
-        })
-        expect(result.credentials).toHaveLength(0)
+        expect(await sharedContext.credentials.get()).toHaveLength(0)
       })
 
       await test.step("\n\nFilling out the registration form and ", async () => {
@@ -3119,12 +2858,7 @@ test.describe.serial(
             options: { annotation: { text: "Click to register" } },
           },
         ])
-        await simulateSuccessfulPasskeyInput(
-          client,
-          authenticatorId,
-          async () =>
-            await sharedPage.getByRole(...selectors.buttonRegister).click(),
-        )
+        await sharedPage.getByRole(...selectors.buttonRegister).click()
       })
 
       await test.step("\n\nOn successful registration you will be redirect to login page.", async () => {
@@ -3134,10 +2868,7 @@ test.describe.serial(
 
         await screenshot(testInfo, sharedPage)
 
-        const result = await client.send("WebAuthn.getCredentials", {
-          authenticatorId,
-        })
-        expect(result.credentials).toHaveLength(1)
+        expect(await sharedContext.credentials.get()).toHaveLength(1)
       })
     })
 
@@ -3160,12 +2891,7 @@ test.describe.serial(
             annotation: { text: "Click to login" },
           },
         )
-        await simulateSuccessfulPasskeyInput(
-          client,
-          authenticatorId,
-          async () =>
-            await sharedPage.getByRole(...selectors.buttonLogin).click(),
-        )
+        await sharedPage.getByRole(...selectors.buttonLogin).click()
       })
 
       await test.step("\n\nOn successful login you will be taken to the applications page.\n\n", async () => {
@@ -3339,7 +3065,7 @@ See, I told you! Easy peasy. 🍋
 You can find the final code for this step on [GitHub](https://github.com/dethstrobe/applywize2/tree/tutorial-4)
 
 ## Further reading
-- [Passkeys E2E Playwright Testing via WebAuthn Virtual Authenticator](https://www.corbado.com/blog/passkeys-e2e-playwright-testing-webauthn-virtual-authenticator)
+- [Playwright's virtual WebAuthn authenticator (`Credentials`)](https://playwright.dev/docs/api/class-credentials)
 - An even more [detailed guide to how Authentication works and the reasoning behind some of the decisions we made](https://docs.rwsdk.com/core/authentication/)
 
 ## What's Coming Next?
