@@ -20,6 +20,8 @@ Your edit will be overwritten by the next time you run Test2Doc.
 ## Can I add handwritten files alongside generated files?
 Yes. Test2Doc only overwrites files prefixed with `test2doc-`. Handwritten files without this prefix will remain untouched.
 
+The one exception is screenshots with a [fixed file name](./user-guide/screenshots/screenshots.md#setting-a-fixed-file-name). They're written with exactly the name you give, so avoid names that match your handwritten files.
+
 ## Can I use Test2Doc with an existing Docusaurus site?
 Yes. Test2Doc generates Markdown files and `_category_.json` files that are fully compatible with Docusaurus. You can configure the `outputDir` to point to your existing Docusaurus docs folder.
 

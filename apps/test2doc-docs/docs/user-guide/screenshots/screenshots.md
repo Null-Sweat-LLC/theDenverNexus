@@ -7,7 +7,7 @@ Test2Doc has a helper function to take screenshots of the page or selectively hi
 
 Screenshots will be added to the markdown files after the [Step](https://playwright.dev/docs/api/class-test#test-step) block's title and in the order they're generated.
 
-Screenshot names are prefixed with `test2doc-` and a 12 character hash based off of buffer image data. E.g. `test2doc-[hash].png`
+Screenshot names are prefixed with `test2doc-` and a 12 character hash based off of buffer image data. E.g. `test2doc-[hash].png`. To give a screenshot the same name on every run, set a [fixed file name](#setting-a-fixed-file-name).
 
 Screenshots need to be associated with a `step`, so be sure to nest the screenshot function call inside of a `step` block.
 
@@ -102,7 +102,7 @@ step block
 
 For screenshots that need additional context or explanation, it is possible to generate images using the `<figure>` tags with a `<figcaption>`. This is useful for providing descriptive text alongside images in your documentation.
 
-To enable figure/figcaption formatting, pass `figure: true` and optionally `caption` in the screenshot options:
+To enable figure/figcaption formatting, pass `figure: true` and optionally `caption` in the `annotation` options:
 
 ### Example test with caption
 ```ts
@@ -113,8 +113,10 @@ test.describe(withDocMeta("describe block"), async () => {
     await test.step("Login screen", async () => {
       await page.goto("https://example.com/login")
       await screenshot(testInfo, page, {
-        figure: true,
-        caption: "The main login screen showing email and password fields"
+        annotation: {
+          figure: true,
+          caption: "The main login screen showing email and password fields",
+        },
       })
     })
   })
@@ -140,7 +142,7 @@ If you want a figure wrapper without a caption, simply set `figure: true`:
 
 ```ts
 await screenshot(testInfo, page, {
-  figure: true
+  annotation: { figure: true },
 })
 ```
 
@@ -161,6 +163,33 @@ Use figure and figcaption when:
 - **Professional documentation**: Formal docs benefit from properly captioned figures
 - **Complex visuals**: Diagrams or multi-part screenshots need clarification
 
+## Setting a fixed file name
+By default a screenshot's file name comes from a hash of the image, so it changes whenever the page looks even slightly different. If you need each run to produce the same set of files, for example to link to them from elsewhere, set `filename` in the `annotation` options. The file is overwritten on every run.
+
+`.png` is added if it's missing, and the name can't contain `/` or `\`.
+
+### Example test
+```ts
+await test.step("Login screen", async () => {
+  await page.goto("https://example.com/login")
+  await screenshot(testInfo, page, {
+    annotation: { filename: "login-screen" },
+  })
+})
+```
+
+### Example markdown
+```md
+Login screen
+![screenshot](./login-screen.png)
+```
+
+Keep in mind:
+- Give each screenshot a unique name. Two screenshots with the same `filename` overwrite each other.
+- Don't set `filename` in `annotationDefaults`, or every screenshot will share one file.
+- Test2Doc only cleans up files prefixed with `test2doc-`. If you rename or remove a screenshot with a fixed name, delete the old file yourself.
+- A fixed name will overwrite a handwritten file with the same name in the output directory.
+
 ## Highlight multiple elements
 In the event that you need to highlight multiple elements, you can pass in an array with `MultiLocatorScreenshot` objects.
 
@@ -176,13 +205,13 @@ test.describe(withDocMeta("describe block"), async () => {
     await test.step("links to github", async () => {
       await page.goto("https://playwright.dev/")
 
-      await screenshot(
-        testInfo,
-        [
-          page.getByRole("link", { name: "Star microsoft/playwright on GitHub", position: "right" }),
-          page.getByRole("link", { name: "GitHub repository" })
-        ],
-      )
+      await screenshot(testInfo, [
+        {
+          target: page.getByRole("link", { name: "Star microsoft/playwright on GitHub" }),
+          options: { annotation: { position: "right" } },
+        },
+        { target: page.getByRole("link", { name: "GitHub repository" }) },
+      ])
     })
   })
 })

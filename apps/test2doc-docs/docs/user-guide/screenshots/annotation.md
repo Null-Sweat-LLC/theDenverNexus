@@ -123,6 +123,10 @@ The location of where the label is rendered.
   - **Description**: Determines the position of the label text relative to the highlighted element. Uses clock convention where 0° = top, 90° = right, etc. If a number is provided, it positions the label at that degree angle. Defaults to automatically positioning towards the screen center.
   - **Default**: Automatically positions label towards the center of the screen.
 
+Labels are always kept inside the screenshot and off the highlighted element. If the label doesn't fit on the preferred side, it's slid back inside the screenshot along that side. If it would still cover the element, Test2Doc tries the opposite side, then the two sides next to it. If no side works, the label is kept on the preferred side, inside the screenshot.
+
+Labels can still cover other parts of the page, like a sidebar. Test2Doc can't tell which parts of the page matter, so set `position` yourself in those cases.
+
 ### Arrow
 Used to point from the label to the element being highlighted.
 
@@ -178,6 +182,25 @@ test.describe(withDocMeta("describe block"), async () => {
 
 ### Example screenshot
 ![A screenshot showing every annotation option in use](./annotation-usage.png)
+
+### Example of a multi-line label
+Longer labels can be split onto multiple lines with `\n`, or wrapped automatically with `labelMaxWidth`. Lines are aligned towards the highlighted element unless you set `textAlign`.
+
+```ts
+await screenshot(testInfo, page.getByRole("button", { name: "Submit" }), {
+  annotation: {
+    text: "Submits the form.\nDisabled until every required field is filled in.",
+    labelMaxWidth: 240,
+    labelBoxPadding: 8,
+    labelBoxFillStyle: "rgba(0, 123, 255, 0.6)",
+    fillStyle: "white",
+    position: "left",
+    showArrow: true,
+  },
+})
+```
+
+Here the label is to the left of the button, so its lines are right-aligned, next to the arrow.
 
 ### Example with figure and caption
 When you want to provide additional context in the documentation, combine visual annotations with semantic HTML:
@@ -248,6 +271,8 @@ export default defineConfig({
 - Use consistent colors across your project for better branding
 
 ## Troubleshooting
-- **Labels not appearing**: Check that `text` is not empty and `position` has sufficient space
+- **Labels not appearing**: Check that `text` is not empty
+- **Label is on a different side than `position`**: The label didn't fit on that side, so it was moved. See [Positioning](#positioning)
+- **Label is too wide**: Set `labelMaxWidth` to wrap it onto multiple lines
 - **Colors not applying**: Ensure valid CSS color values (e.g., hex, rgba)
 - **Arrows misaligned**: Verify `position` and element visibility
