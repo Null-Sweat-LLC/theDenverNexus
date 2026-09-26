@@ -1,5 +1,5 @@
 import { test, expect, describe } from "vitest"
-import { type Box, placeLabel } from "./labelPlacement.js"
+import { type Box, getTextAlign, placeLabel } from "./labelPlacement.js"
 
 const viewport = { width: 1280, height: 720 }
 const label = { width: 200, height: 24 }
@@ -149,5 +149,24 @@ describe("placeLabel", () => {
 
     expect(box.x).toBe(0)
     expect(box.y).toBe(viewport.height - 24)
+  })
+})
+
+describe("getTextAlign", () => {
+  const target = { x: 500, y: 300, width: 100, height: 40 }
+
+  test("label left of the target aligns right", () => {
+    expect(getTextAlign(target, { ...label, x: 276, y: 308 })).toBe("right")
+  })
+
+  test("label right of the target aligns left", () => {
+    expect(getTextAlign(target, { ...label, x: 624, y: 308 })).toBe("left")
+  })
+
+  test.each([
+    ["above", { ...label, x: 450, y: 252 }],
+    ["below", { ...label, x: 450, y: 364 }],
+  ])("label %s the target is centered", (_, box) => {
+    expect(getTextAlign(target, box)).toBe("center")
   })
 })

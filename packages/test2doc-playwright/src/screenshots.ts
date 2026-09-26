@@ -4,17 +4,26 @@ import type {
   PageScreenshotOptions,
   TestInfo,
 } from "@playwright/test"
-import { type Box, type Position, placeLabel } from "./labelPlacement.js"
+import {
+  type Box,
+  getTextAlign,
+  type Position,
+  placeLabel,
+  type TextAlign,
+} from "./labelPlacement.js"
 
 let screenshotCounter = 0
 
-const LABEL_PADDING = 4
+const getLabelPadding = (annotation: AnnotationOptions) =>
+  annotation.labelBoxPadding ?? 4
 
 const getLabelMargin = (annotation: AnnotationOptions) =>
   annotation.showArrow ? 24 : 4
 
 export interface AnnotationOptions {
-  text?: string // Text to display for label
+  text?: string // Text to display for label, "\n" starts a new line
+  labelMaxWidth?: number // Wrap label text onto new lines past this width in pixels
+  textAlign?: TextAlign // Alignment of multi-line label text, defaults to the side facing the element
   fillStyle?: string // Label text color
   font?: string // Font size and family
   strokeStyle?: string // Label outline color
@@ -22,6 +31,7 @@ export interface AnnotationOptions {
   labelBoxFillStyle?: string // Label background color
   labelBoxStrokeStyle?: string // Label border color
   labelBoxLineWidth?: number // Label border width
+  labelBoxPadding?: number // Space between the label text and the label border
   highlightFillStyle?: string // Highlight background
   highlightStrokeStyle?: string // Highlight border
   highlightLineWidth?: number // Highlight border width
@@ -119,7 +129,7 @@ async function generateScreenshotBuffer(
   }))
 
   if (boundingBoxes) {
-    // Measure label text in the page, since it depends on the page's fonts
+    // Split and measure label text in the page, since it depends on the page's fonts
     const { viewport, textMetrics } = await page.evaluate((annotations) => {
       const ctx = document.createElement("canvas").getContext("2d")
       return {
@@ -127,9 +137,52 @@ async function generateScreenshotBuffer(
         textMetrics: annotations.map((annotation) => {
           if (!ctx || !annotation.text) return null
           ctx.font = annotation.font ?? "14px Arial"
-          const { width, actualBoundingBoxAscent, actualBoundingBoxDescent } =
-            ctx.measureText(annotation.text)
-          return { width, actualBoundingBoxAscent, actualBoundingBoxDescent }
+          const measure = (text: string) => ctx.measureText(text).width
+          const maxWidth = annotation.labelMaxWidth
+
+          // Break on "\n", then word wrap each line to fit labelMaxWidth
+          const lines = annotation.text.split("\n").flatMap((line) => {
+            if (!maxWidth) return [line]
+            const wrapped: string[] = []
+            let current = ""
+            for (const word of line.split(" ")) {
+              const next = current ? `${current} ${word}` : word
+              if (current && measure(next) > maxWidth) {
+                wrapped.push(current)
+                current = word
+              } else {
+                current = next
+              }
+            }
+            return [...wrapped, current]
+          })
+
+          const measured = lines.map((text) => ({ text, width: measure(text) }))
+          const width = Math.max(...measured.map(({ width }) => width))
+          const first = ctx.measureText(lines[0] ?? "")
+
+          // A single line hugs its glyphs, multiple lines use the font's line height
+          if (lines.length === 1) {
+            const ascent = first.actualBoundingBoxAscent
+            const descent = first.actualBoundingBoxDescent
+            return {
+              lines: measured,
+              width,
+              height: ascent + descent,
+              baseline: ascent + descent / 2,
+              lineHeight: 0,
+            }
+          }
+
+          const lineHeight =
+            first.fontBoundingBoxAscent + first.fontBoundingBoxDescent
+          return {
+            lines: measured,
+            width,
+            height: lines.length * lineHeight,
+            baseline: first.fontBoundingBoxAscent,
+            lineHeight,
+          }
         }),
       }
     }, annotations)
@@ -141,11 +194,8 @@ async function generateScreenshotBuffer(
       return placeLabel({
         target: box,
         label: {
-          width: metrics.width + LABEL_PADDING * 2,
-          height:
-            metrics.actualBoundingBoxAscent +
-            metrics.actualBoundingBoxDescent +
-            LABEL_PADDING * 2,
+          width: metrics.width + getLabelPadding(annotation) * 2,
+          height: metrics.height + getLabelPadding(annotation) * 2,
         },
         viewport,
         position: annotation.position,
@@ -153,8 +203,20 @@ async function generateScreenshotBuffer(
       })
     })
 
+    const textAligns = boundingBoxes.map((box, index) => {
+      const labelBox = labelBoxes[index]
+      if (!box || !labelBox) return "center"
+      return annotations[index]?.textAlign ?? getTextAlign(box, labelBox)
+    })
+
     await page.evaluate(
-      ({ boundingBoxes: boxes, annotations, labelBoxes }) => {
+      ({
+        boundingBoxes: boxes,
+        annotations,
+        labelBoxes,
+        textMetrics,
+        textAligns,
+      }) => {
         const canvas = document.createElement("canvas")
         canvas.id = "test2doc-highlight-canvas"
         canvas.style.cssText = `
@@ -191,15 +253,9 @@ async function generateScreenshotBuffer(
 
             if (annotation?.text) {
               ctx.font = annotation?.font ?? "14px Arial"
-              const {
-                width: textWidth,
-                actualBoundingBoxAscent,
-                actualBoundingBoxDescent,
-              } = ctx.measureText(annotation.text)
-              const textHeight =
-                actualBoundingBoxAscent + actualBoundingBoxDescent
               const labelBox = labelBoxes[index]
-              if (!labelBox) continue
+              const metrics = textMetrics[index]
+              if (!labelBox || !metrics) continue
               const centerBox = {
                 x: box.x + box.width / 2,
                 y: box.y + box.height / 2,
@@ -359,19 +415,29 @@ async function generateScreenshotBuffer(
                   labelBox.height,
                 )
               }
-              const labelX = labelPosition.x - textWidth / 2
-              const labelY =
-                labelPosition.y +
-                actualBoundingBoxAscent -
-                textHeight / 2 +
-                actualBoundingBoxDescent / 2
+              const textAlign = textAligns[index]
+              const padding = (labelBox.width - metrics.width) / 2
+              const lines = metrics.lines.map(({ text, width }, line) => ({
+                text,
+                x:
+                  textAlign === "left"
+                    ? labelBox.x + padding
+                    : textAlign === "right"
+                      ? labelBox.x + labelBox.width - padding - width
+                      : labelPosition.x - width / 2,
+                y:
+                  labelPosition.y -
+                  metrics.height / 2 +
+                  metrics.baseline +
+                  line * metrics.lineHeight,
+              }))
 
-              // Draw label text
+              // Draw label text, outlines first so they don't cover other lines
               ctx.strokeStyle = annotation?.strokeStyle ?? "rgba(0, 0, 0, 0.1)"
               ctx.lineWidth = annotation?.lineWidth ?? 2
-              ctx.strokeText(annotation.text, labelX, labelY)
+              for (const { text, x, y } of lines) ctx.strokeText(text, x, y)
               ctx.fillStyle = annotation?.fillStyle ?? "rgba(0, 0, 0, 1)"
-              ctx.fillText(annotation.text, labelX, labelY)
+              for (const { text, x, y } of lines) ctx.fillText(text, x, y)
             }
           }
         }
@@ -384,7 +450,13 @@ async function generateScreenshotBuffer(
           document.querySelector("dialog[open]") ?? document.body
         topLevelContainer.appendChild(canvas)
       },
-      { boundingBoxes, annotations, labelBoxes },
+      {
+        boundingBoxes,
+        annotations,
+        labelBoxes,
+        textMetrics,
+        textAligns,
+      },
     )
 
     const screenshotBuffer = await page.screenshot(options)

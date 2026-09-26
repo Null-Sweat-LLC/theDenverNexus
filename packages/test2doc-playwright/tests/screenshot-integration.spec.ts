@@ -597,3 +597,63 @@ test("label that would overflow the viewport falls back to a side that fits", as
   })
   await expectScreenshotToMatch(testInfo, "label-overflow-corner.png")
 })
+
+test("multi-line labels from line breaks and labelMaxWidth", async ({
+  page,
+}, testInfo) => {
+  await setup(page)
+
+  const button = page.getByRole("button", { name: "Click Me" })
+  await screenshot(testInfo, button, {
+    annotation: {
+      text: "First line\nA longer second line\nThird",
+      position: "right",
+      showArrow: true,
+      labelBoxStrokeStyle: "black",
+    },
+  })
+  await expectScreenshotToMatch(testInfo, "label-multi-line-breaks.png")
+
+  await screenshot(testInfo, button, {
+    annotation: {
+      text: "First line\nA longer second line\nThird",
+      position: "left",
+      showArrow: true,
+      labelBoxStrokeStyle: "black",
+    },
+  })
+  await expectScreenshotToMatch(testInfo, "label-multi-line-align-right.png")
+
+  await screenshot(testInfo, button, {
+    annotation: {
+      text: "First line\nA longer second line\nThird",
+      position: "left",
+      textAlign: "center",
+      showArrow: true,
+      labelBoxStrokeStyle: "black",
+    },
+  })
+  await expectScreenshotToMatch(testInfo, "label-multi-line-align-override.png")
+
+  await screenshot(testInfo, button, {
+    annotation: {
+      text: "First line\nA longer second line\nThird",
+      position: "left",
+      labelBoxPadding: 12,
+      showArrow: true,
+      labelBoxStrokeStyle: "black",
+    },
+  })
+  await expectScreenshotToMatch(testInfo, "label-box-padding.png")
+
+  await screenshot(testInfo, button, {
+    annotation: {
+      text: "This label is long enough that it should wrap onto a few lines",
+      labelMaxWidth: 160,
+      position: "above",
+      showArrow: true,
+      labelBoxStrokeStyle: "black",
+    },
+  })
+  await expectScreenshotToMatch(testInfo, "label-multi-line-wrap.png")
+})

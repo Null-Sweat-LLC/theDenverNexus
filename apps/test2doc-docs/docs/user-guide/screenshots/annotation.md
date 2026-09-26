@@ -21,8 +21,18 @@ The text that explains what is being highlighted.
 
 - **`text`**:
   - **Type**: `string`
-  - **Description**: The text to display for the label. This is the main content that will be rendered on the canvas.
+  - **Description**: The text to display for the label. This is the main content that will be rendered on the canvas. Use `\n` to start a new line.
   - **Default**: `""` (empty string)
+
+- **`labelMaxWidth`**:
+  - **Type**: `number`
+  - **Description**: The maximum width of the label text in pixels. Longer text wraps onto new lines between words. A single word wider than this stays on one line.
+  - **Default**: `undefined` (no wrapping)
+
+- **`textAlign`**:
+  - **Type**: `"left" | "center" | "right"`
+  - **Description**: How lines of a multi-line label are aligned inside the label box.
+  - **Default**: Aligned towards the highlighted element: `"right"` when the label is left of it, `"left"` when the label is right of it, otherwise `"center"`.
 
 - **`altText`**:
   - **Type**: `string`
@@ -76,6 +86,11 @@ A box that the label's text can appear it to make the text stand out more.
   - **Type**: `number`
   - **Description**: The width of the border for the label box. This property determines how thick the outline of the label box will be.
   - **Default**: `2`
+
+- **`labelBoxPadding`**:
+  - **Type**: `number`
+  - **Description**: The space in pixels between the label text and the edge of the label box, on all four sides.
+  - **Default**: `4`
 
 ### Highlight Box Styling
 A box that is drawn around the element you wish to highlight.

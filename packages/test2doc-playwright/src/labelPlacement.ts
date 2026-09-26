@@ -147,3 +147,15 @@ export function placeLabel({
     candidates.find((box) => !overlaps(box, target)) ?? (candidates[0] as Box)
   )
 }
+
+export type TextAlign = "left" | "center" | "right"
+
+/**
+ * Aligns label text towards the target: a label left of the target aligns
+ * right, a label right of it aligns left, and anything else is centered.
+ */
+export const getTextAlign = (target: Box, label: Box): TextAlign => {
+  if (label.x + label.width <= target.x) return "right"
+  if (label.x >= target.x + target.width) return "left"
+  return "center"
+}
