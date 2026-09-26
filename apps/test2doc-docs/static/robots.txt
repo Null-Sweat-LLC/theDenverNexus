@@ -4,7 +4,7 @@ User-agent: *
 Allow: /
 
 # Sitemaps help search engines find your content faster
-Sitemap: https://test2doc.com/sitemap.xml
+Sitemap: https://www.test2doc.com/sitemap.xml
 
 # Prevent crawlers from indexing Docusaurus internal files or search pages
 Disallow: /search
