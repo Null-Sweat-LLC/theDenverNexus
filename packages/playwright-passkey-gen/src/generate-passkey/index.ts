@@ -12,10 +12,31 @@ export interface TestPasskey {
   userHandle: string
   privateKey: string
   publicKey: string
+  cosePublicKey: number[]
 }
 
 function toBase64Url(buffer: Buffer): string {
   return buffer.toString("base64url")
+}
+
+/**
+ * Encode an ECDSA P-256 public key as a COSE_Key, the format WebAuthn servers
+ * like `@simplewebauthn/server` store and verify with.
+ *
+ * The key is always the same CBOR map of 5 entries, so it's written out by
+ * hand rather than pulling in a CBOR library:
+ * { 1 (kty): 2 (EC2), 3 (alg): -7 (ES256), -1 (crv): 1 (P-256), -2 (x): bytes, -3 (y): bytes }
+ */
+function toCosePublicKey(x: Buffer, y: Buffer): number[] {
+  // biome-ignore format: one line per COSE map entry
+  return [
+    0xa5, // map with 5 entries
+    0x01, 0x02, // kty: EC2
+    0x03, 0x26, // alg: ES256 (-7)
+    0x20, 0x01, // crv (-1): P-256
+    0x21, 0x58, 0x20, ...x, // x (-2): 32 byte string
+    0x22, 0x58, 0x20, ...y, // y (-3): 32 byte string
+  ]
 }
 
 /**
@@ -30,8 +51,10 @@ function toBase64Url(buffer: Buffer): string {
  * @param userId - User ID to associate with the credential; also encoded
  * as the WebAuthn user handle.
  * @param rpId - Relying party id the credential is scoped to.
- * @returns The generated passkey, with all binary fields base64url-encoded
- * to match what Playwright's `context.credentials.create()` expects.
+ * @returns The generated passkey. The binary fields Playwright's
+ * `context.credentials.create()` takes are base64url-encoded, and
+ * `cosePublicKey` has the public key as COSE bytes to store in your app's
+ * database.
  */
 export function generateTestPasskey(
   username: string,
@@ -41,6 +64,8 @@ export function generateTestPasskey(
   const { publicKey, privateKey } = generateKeyPairSync("ec", {
     namedCurve: "P-256",
   })
+  const { x, y } = publicKey.export({ format: "jwk" })
+  if (!x || !y) throw new Error("Expected an EC public key")
 
   return {
     username,
@@ -52,6 +77,10 @@ export function generateTestPasskey(
       privateKey.export({ format: "der", type: "pkcs8" }),
     ),
     publicKey: toBase64Url(publicKey.export({ format: "der", type: "spki" })),
+    cosePublicKey: toCosePublicKey(
+      Buffer.from(x, "base64url"),
+      Buffer.from(y, "base64url"),
+    ),
   }
 }
 

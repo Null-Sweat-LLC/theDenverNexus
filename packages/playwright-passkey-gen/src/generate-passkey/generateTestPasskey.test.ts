@@ -1,7 +1,13 @@
 import { expect, test } from "vitest"
 import { mkdir, rmdir, unlink, access } from "node:fs/promises"
 import { join } from "node:path"
-import { main } from "./index.js"
+import { createPublicKey } from "node:crypto"
+import {
+  convertCOSEtoPKCS,
+  cose,
+  isoCBOR,
+} from "@simplewebauthn/server/helpers"
+import { generateTestPasskey, main } from "./index.js"
 
 const UUID_V4_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -14,6 +20,7 @@ function assertTestPasskey(TESTPASSKEY: {
   userHandle: string
   privateKey: string
   publicKey: string
+  cosePublicKey: number[]
 }) {
   expect(TESTPASSKEY.username).toBe("testuser")
   expect(TESTPASSKEY.userId).toMatch(UUID_V4_REGEX)
@@ -22,7 +29,40 @@ function assertTestPasskey(TESTPASSKEY: {
   expect(TESTPASSKEY.userHandle).toBeDefined()
   expect(TESTPASSKEY.privateKey).toBeDefined()
   expect(TESTPASSKEY.publicKey).toBeDefined()
+  expect(TESTPASSKEY.cosePublicKey).toHaveLength(77)
 }
+
+test("cosePublicKey is the same key as publicKey, encoded as COSE", () => {
+  const passkey = generateTestPasskey("testuser", "user-123")
+  const { x, y } = createPublicKey({
+    key: Buffer.from(passkey.publicKey, "base64url"),
+    format: "der",
+    type: "spki",
+  }).export({ format: "jwk" })
+  if (!x || !y) throw new Error("Expected an EC public key")
+
+  // Encoded independently, the way @simplewebauthn/server builds COSE keys
+  const expected = isoCBOR.encode(
+    new Map<number, number | Uint8Array>([
+      [cose.COSEKEYS.kty, cose.COSEKTY.EC2],
+      [cose.COSEKEYS.alg, cose.COSEALG.ES256],
+      [cose.COSEKEYS.crv, cose.COSECRV.P256],
+      [cose.COSEKEYS.x, Buffer.from(x, "base64url")],
+      [cose.COSEKEYS.y, Buffer.from(y, "base64url")],
+    ]) as Parameters<typeof isoCBOR.encode>[0],
+  )
+  expect(passkey.cosePublicKey).toEqual([...expected])
+
+  // And decodes back to the same point on the curve
+  const point = convertCOSEtoPKCS(Uint8Array.from(passkey.cosePublicKey))
+  expect(Buffer.from(point)).toEqual(
+    Buffer.concat([
+      Buffer.from([0x04]),
+      Buffer.from(x, "base64url"),
+      Buffer.from(y, "base64url"),
+    ]),
+  )
+})
 
 test("generate a test passkey file", async () => {
   const outputPath = join(process.cwd(), "test-passkey.ts")

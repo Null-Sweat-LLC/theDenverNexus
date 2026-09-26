@@ -1,6 +1,6 @@
 {
   "name": "@test2doc/playwright-passkey-gen",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A utility to generate test passkey credentials for WebAuthn testing",
   "repository": {
     "type": "git",

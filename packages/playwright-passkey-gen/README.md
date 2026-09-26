@@ -1,6 +1,6 @@
 # @test2doc/playwright-passkey-gen
 
-A CLI tool and library for generating test passkey credentials for WebAuthn testing. Generation is pure `node:crypto` — no browser, no Playwright. The generated credential is a plain ECDSA P-256 keypair shaped to drop straight into Playwright's native [`browserContext.credentials`](https://playwright.dev/docs/api/class-credentials) API (v1.61+) for use in tests.
+A CLI tool and library for generating test passkey credentials for WebAuthn testing. Generation is pure `node:crypto` — no browser, no Playwright. The generated credential is a plain ECDSA P-256 keypair shaped to drop straight into Playwright's native [`browserContext.credentials`](https://playwright.dev/docs/api/class-credentials) API (v1.61+) for use in tests, plus the public key in the COSE format WebAuthn servers store, so you can seed it into your app's database.
 
 ## Usage CLI
 
@@ -58,7 +58,7 @@ await main({
 
 ## Generated Output
 
-The tool generates a test passkey credential with the following structure — all fields are already in the base64url encoding Playwright's `credentials.create()` expects:
+The tool generates a test passkey credential with the following structure. `id`, `userHandle`, `privateKey` and `publicKey` are already in the base64url encoding Playwright's `credentials.create()` expects:
 
 ```typescript
 export const TESTPASSKEY = {
@@ -68,9 +68,12 @@ export const TESTPASSKEY = {
   id: "base64url-encoded-credential-id",
   userHandle: "base64url-encoded-user-handle",
   privateKey: "base64url-encoded PKCS#8 (DER) private key",
-  publicKey: "base64url-encoded SPKI (DER) public key"
+  publicKey: "base64url-encoded SPKI (DER) public key",
+  cosePublicKey: [/* the same public key as COSE bytes */]
 }
 ```
+
+`cosePublicKey` is the public key in the COSE format that WebAuthn servers like [`@simplewebauthn/server`](https://simplewebauthn.dev/) store and verify with. Playwright ignores it.
 
 ## Using Generated Passkeys
 
@@ -93,9 +96,24 @@ test('authenticate with passkey', async ({ page }) => {
 
 Playwright's `credentials` API is cross-browser, so this works unmodified in Chromium, Firefox, and WebKit. This package's own e2e test (`pnpm test`) runs against all three.
 
+### Seeding your app's database
+
+For the login to succeed, your app has to know about the passkey too. Store `id` as the credential id and `cosePublicKey` as the public key, the same way your app stores a passkey a user registers. For example, with `@simplewebauthn/server`:
+
+```typescript
+await db.insertInto('credentials').values({
+  userId: TESTPASSKEY.userId,
+  credentialId: TESTPASSKEY.id,
+  publicKey: Uint8Array.from(TESTPASSKEY.cosePublicKey),
+  counter: 0,
+});
+```
+
+Seeding the passkey with `credentials.create()` starts its signature counter at 0 on every run, so if your server checks the counter, reset the stored `counter` to 0 before logging in.
+
 ## How It Works
 
-A passkey is just an ECDSA P-256 keypair plus some WebAuthn bookkeeping (a credential id and a user handle) — none of that requires a real authenticator ceremony or a browser. `generateTestPasskey()` generates the keypair with `node:crypto`'s `generateKeyPairSync()` and encodes everything as base64url, matching the shape Playwright's `context.credentials.create()` expects when importing a known credential. No Chromium, no CDP virtual authenticator, no `@playwright/test` dependency at runtime.
+A passkey is just an ECDSA P-256 keypair plus some WebAuthn bookkeeping (a credential id and a user handle) — none of that requires a real authenticator ceremony or a browser. `generateTestPasskey()` generates the keypair with `node:crypto`'s `generateKeyPairSync()` and encodes everything as base64url, matching the shape Playwright's `context.credentials.create()` expects when importing a known credential. It also writes the public key as a COSE key, a small fixed CBOR structure encoded by hand. No Chromium, no CDP virtual authenticator, no `@playwright/test` dependency at runtime.
 
 The bundled demo server (`pnpm start`, exercised by the e2e test) verifies a generated passkey's login assertion with [`@simplewebauthn/server`](https://simplewebauthn.dev/), converting the SPKI public key into the COSE format that library expects. This cross-checks generated credentials against an independent WebAuthn implementation rather than only our own crypto code. That verification path (and Playwright itself) is only needed for this package's own dev/test workflow — not for generating a passkey.
 
