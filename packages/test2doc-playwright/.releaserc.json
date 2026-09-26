@@ -3,9 +3,8 @@
   "tagFormat": "test2doc-playwright-v${version}",
   "repositoryUrl": "https://github.com/Null-Sweat-LLC/theDenverNexus",
   "plugins": [
-    "./sr-path-filter.js",
     [
-      "@semantic-release/commit-analyzer",
+      "./sr-path-filter.js",
       {
         "preset": "conventionalcommits",
         "releaseRules": [
@@ -14,12 +13,6 @@
           { "type": "perf", "release": "patch" },
           { "type": "revert", "release": "patch" }
         ]
-      }
-    ],
-    [
-      "@semantic-release/release-notes-generator",
-      {
-        "preset": "conventionalcommits"
       }
     ],
     ["@semantic-release/changelog"],
