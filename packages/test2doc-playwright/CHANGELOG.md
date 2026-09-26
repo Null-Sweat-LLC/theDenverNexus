@@ -1,3 +1,17 @@
+## [1.10.0](https://github.com/Null-Sweat-LLC/theDenverNexus/compare/test2doc-playwright-v1.9.0...test2doc-playwright-v1.10.0) (2026-09-26)
+
+### Features
+
+* **test2doc-playwright:** add filename annotation for screenshots ([5129f74](https://github.com/Null-Sweat-LLC/theDenverNexus/commit/5129f74d1fe68a301873706231d3acec6de3c0cf)), closes [#509](https://github.com/Null-Sweat-LLC/theDenverNexus/issues/509)
+* **test2doc-playwright:** support multi-line annotation labels ([5f76017](https://github.com/Null-Sweat-LLC/theDenverNexus/commit/5f76017491e2aa106e32cff7ab2e51b9bbad5930)), closes [#282](https://github.com/Null-Sweat-LLC/theDenverNexus/issues/282)
+
+### Bug Fixes
+
+* **test2doc-playwright:** fix build and add guard on scaleProgressBar ([a6e6165](https://github.com/Null-Sweat-LLC/theDenverNexus/commit/a6e6165f326a0094a2bc6c3a3f7c178a2db0dd0f))
+* **test2doc-playwright:** keep annotation labels inside the viewport and off their target ([7a2bd9e](https://github.com/Null-Sweat-LLC/theDenverNexus/commit/7a2bd9e4be52b9ed90d01bd21423b0cd7476e14f)), closes [#516](https://github.com/Null-Sweat-LLC/theDenverNexus/issues/516)
+* **test2doc-playwright:** remove postinstall script ([7649138](https://github.com/Null-Sweat-LLC/theDenverNexus/commit/7649138383396c9e827588797bfbffbc8e93dc54))
+* **test2doc-playwright:** scale progress bar to terminal width to prevent line wrapping ([697278c](https://github.com/Null-Sweat-LLC/theDenverNexus/commit/697278c475ea2d0e26539491e46c7fda410389df))
+
 ## [1.9.0](https://github.com/Null-Sweat-LLC/theDenverNexus/compare/test2doc-playwright-v1.8.0...test2doc-playwright-v1.9.0) (2026-05-17)
 
 ### Features
