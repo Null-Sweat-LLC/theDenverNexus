@@ -571,3 +571,29 @@ test("screenshot should support figure and caption metadata for HTML figure elem
     /test2doc-\d+-\d.png\[test2doc_screenshot\]:\{"figure":true,"caption":"Submit button"\}/,
   )
 })
+
+test("label that would overflow the viewport falls back to a side that fits", async ({
+  page,
+}, testInfo) => {
+  await setupWithRegions(page)
+
+  const leftRegion = page.getByRole("region", { name: "left side" })
+  await screenshot(testInfo, leftRegion, {
+    annotation: {
+      text: "Label that would be clipped on the left",
+      position: "left",
+      showArrow: true,
+    },
+  })
+  await expectScreenshotToMatch(testInfo, "label-overflow-fallback.png")
+
+  const topLeftButton = page.getByRole("button", { name: "Top Left Button" })
+  await screenshot(testInfo, topLeftButton, {
+    annotation: {
+      text: "Label that would be clipped above",
+      position: "above",
+      showArrow: true,
+    },
+  })
+  await expectScreenshotToMatch(testInfo, "label-overflow-corner.png")
+})
