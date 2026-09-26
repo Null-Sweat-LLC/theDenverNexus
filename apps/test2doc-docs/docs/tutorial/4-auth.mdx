@@ -627,7 +627,7 @@ What might cause this? The dreaded _race condition_. If you take a look at when 
 
 Turns out Playwright will run faster then the server can send the JS and the browser will load it in to working memory.
 
-There are a few ways to solve this. We can do some state tracking and figure out when the JS loads, or can tell Playwright to wait for the network to stop having inflight requests, but I'm going to opt for lighter JS solution. We're instead of needing to have React manage the state of the input field, we're going to let browser handle it. We'll only refer to the input by reference in our component.
+There are a few ways to solve this. We can do some state tracking and figure out when the JS loads, or can tell Playwright to wait for the network to stop having inflight requests. For the empty input, I'm going to opt for a lighter JS solution: instead of needing to have React manage the state of the input field, we're going to let the browser handle it. We'll only refer to the input by reference in our component.
 
 ```ts {4,14,17,24,30,56}
 "use client"
@@ -699,7 +699,20 @@ export function Signup() {
 
 I have a saying, "_less code, more better_". We can actually remove the `useState` to track the input, remove the callback that updates that state on the input. And we swap out the `useState` for a `useRef` and update the variable to use the ref.
 
-Now, the test should pass even when starting the server fresh and we reduced code and made our app a bit more efficient. The power of testing.
+That fixes the username getting lost. But the race has a second half: if Playwright clicks the **Register with passkey** button before React has loaded, the click does nothing, and the test times out waiting for the result. So in the test, after going to the sign up page, we'll also wait for the page to finish loading.
+
+```ts title="tests/authentication.spec.ts" {3-5}
+await test.step("On the sign up page at `/auth/signup`.", async () => {
+  await page.goto("auth/signup")
+  // Wait for the page's JavaScript to finish loading, or the click can
+  // land before React is ready to handle it
+  await page.waitForLoadState("networkidle")
+  ...
+```
+
+`networkidle` waits until the page hasn't made any network requests for half a second. Playwright's docs [discourage it](https://playwright.dev/docs/api/class-page#page-wait-for-load-state) for most waiting, since waiting for something specific on the page is faster and more reliable. But here nothing on the page shows that React is ready, so waiting for the page's JavaScript to finish downloading is the simplest option that works.
+
+Now, the test should pass even when starting the server fresh, and we reduced code and made our app a bit more efficient. The power of testing.
 
 #### Test redirect to login page
 The last thing we'll need (for now), after we successfully register a new user, we want to redirect them to the login page.
@@ -816,7 +829,7 @@ We'll add:
 - Screenshots
 - Front matter metadata to render in the sidebar
 
-```ts {6,9,13,24,35-53,62-64}
+```ts {6,9,13,27,38-56,65-67}
 import { test, expect } from "@playwright/test"
 import { randomUUID } from "crypto"
 import { withDocMeta } from "@test2doc/playwright/DocMeta"
@@ -835,6 +848,9 @@ test.describe(
 
       await test.step("To get started with registration, goto the sign up page at `/auth/signup`.", async () => {
         await page.goto("auth/signup")
+        // Wait for the page's JavaScript to finish loading, or the click can
+        // land before React is ready to handle it
+        await page.waitForLoadState("networkidle")
 
         await expect(
           page.getByRole("heading", { name: "Sign up" }),
@@ -962,6 +978,9 @@ test("Login with existing user", async ({ page }, testInfo) => {
 
   await test.step("While on the login page at `/auth/login`.\n\n", async () => {
     await page.goto("auth/login")
+    // Wait for the page's JavaScript to finish loading, or the click can
+    // land before React is ready to handle it
+    await page.waitForLoadState("networkidle")
 
     await expect(page.getByRole("heading", { name: "YOLO" })).toBeVisible()
 
@@ -992,7 +1011,7 @@ test("Login with existing user", async ({ page }, testInfo) => {
 
 Now, if you run the test, you'll notice it fails. Because each test runs in isolation, each one gets its own browser context, and the passkey from registration lives in the registration test's context. We'll need to come up with a way to share the passkey between tests. We can do this by sharing the browser context between tests, and we'll need to make sure that the tests run in order.
 
-```ts title="tests/authentication.spec.ts" {1,8,12-23,27,31,34,37,39,43,54,58,69-71,76,79,83,89,92,95,101,107-109,113,115}
+```ts title="tests/authentication.spec.ts" {1,8,12-23,27,31,37,40,42,46,57,61,72-74,79,82,86,92,98,101,107,113-115,119,121}
 import { test, expect, Page, BrowserContext } from "@playwright/test"
 import { randomUUID } from "crypto"
 import { withDocMeta } from "@test2doc/playwright/DocMeta"
@@ -1024,6 +1043,9 @@ test.describe.serial(
 
       await test.step("To get started with registration, goto the sign up page at `/auth/signup`.", async () => {
         await sharedPage.goto("auth/signup")
+        // Wait for the page's JavaScript to finish loading, or the click can
+        // land before React is ready to handle it
+        await sharedPage.waitForLoadState("networkidle")
 
         await expect(
           sharedPage.getByRole("heading", { name: "Sign up" }),
@@ -1082,6 +1104,9 @@ test.describe.serial(
     test("Login with existing user", async ({}, testInfo) => {
       await test.step("While on the login page at `/auth/login`.\n\n", async () => {
         await sharedPage.goto("auth/login")
+        // Wait for the page's JavaScript to finish loading, or the click can
+        // land before React is ready to handle it
+        await sharedPage.waitForLoadState("networkidle")
 
         await expect(
           sharedPage.getByRole("heading", { name: "YOLO" }),
@@ -1785,7 +1810,7 @@ Now, we can jump over to our `Login` component and style it.
 
 Let's update our test first. We'll be changing the **YOLO** header to **Login**, so we'll reflect that first.
 
-```ts title="" {4,20}
+```ts title="" {4,23}
 ...
 await test.step("\n\nOn successful registration you will be redirect to login page.", async () => {
     await expect(
@@ -1803,6 +1828,9 @@ await test.step("\n\nOn successful registration you will be redirect to login pa
 test("Login with existing user", async ({}, testInfo) => {
   await test.step("While on the login page at `/auth/login`.\n\n", async () => {
     await sharedPage.goto("auth/login")
+    // Wait for the page's JavaScript to finish loading, or the click can
+    // land before React is ready to handle it
+    await sharedPage.waitForLoadState("networkidle")
 
     await expect(
       sharedPage.getByRole("heading", { name: "Login" }),
@@ -2441,7 +2469,7 @@ await expect(
 <details>
 <summary>Updated `tests/authentication.spec.ts` code</summary>
 
-```ts title="tests/authentication.spec.ts" {3,35,44,53,57,65,70,86,95,101,106,129,140,150,161,181,188,203,210}
+```ts title="tests/authentication.spec.ts" {3,38,47,56,60,68,73,92,101,107,112,135,146,156,167,187,194,209,216}
 import { test, expect, Page, BrowserContext } from "@playwright/test"
 import { randomUUID } from "crypto"
 import { selectors } from "./util"
@@ -2474,6 +2502,9 @@ test.describe.serial(
 
       await test.step("To get started with registration, goto the sign up page at `/auth/signup`.", async () => {
         await sharedPage.goto("auth/signup")
+        // Wait for the page's JavaScript to finish loading, or the click can
+        // land before React is ready to handle it
+        await sharedPage.waitForLoadState("networkidle")
 
         await expect(
           sharedPage.getByRole(...selectors.headingSignup),
@@ -2525,6 +2556,9 @@ test.describe.serial(
     test("Login with existing user", async ({}, testInfo) => {
       await test.step("While on the login page at `/auth/login`.\n\n", async () => {
         await sharedPage.goto("auth/login")
+        // Wait for the page's JavaScript to finish loading, or the click can
+        // land before React is ready to handle it
+        await sharedPage.waitForLoadState("networkidle")
 
         await expect(
           sharedPage.getByRole(...selectors.headingLogin),
@@ -2832,6 +2866,9 @@ test.describe.serial(
 
       await test.step("To get started with registration, goto the sign up page at `/auth/signup`.", async () => {
         await sharedPage.goto("auth/signup")
+        // Wait for the page's JavaScript to finish loading, or the click can
+        // land before React is ready to handle it
+        await sharedPage.waitForLoadState("networkidle")
 
         await expect(
           sharedPage.getByRole(...selectors.headingSignup),
@@ -2875,6 +2912,9 @@ test.describe.serial(
     test("Login with existing user", async ({}, testInfo) => {
       await test.step("While on the login page at `/auth/login`.\n\n", async () => {
         await sharedPage.goto("auth/login")
+        // Wait for the page's JavaScript to finish loading, or the click can
+        // land before React is ready to handle it
+        await sharedPage.waitForLoadState("networkidle")
 
         await expect(
           sharedPage.getByRole(...selectors.headingLogin),
