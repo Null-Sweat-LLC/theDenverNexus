@@ -217,3 +217,19 @@ test("generate the correct extension if the output filename is missing the exten
     await unlink(outputPath)
   } catch {}
 })
+
+test("generate a passkey to an absolute output path", async () => {
+  const outputPath = join(process.cwd(), "absolute-passkey.ts")
+  try {
+    await unlink(outputPath)
+  } catch {}
+
+  await main({ output: outputPath })
+
+  const { TESTPASSKEY } = await import(outputPath)
+  assertTestPasskey(TESTPASSKEY)
+
+  try {
+    await unlink(outputPath)
+  } catch {}
+})

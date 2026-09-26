@@ -1,6 +1,6 @@
 import { generateKeyPairSync, randomBytes } from "node:crypto"
 import { writeFileSync } from "node:fs"
-import { join } from "node:path"
+import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { Command, type OptionValues } from "commander"
 
@@ -114,7 +114,7 @@ export async function main({
   const ext = extensionMap[type] || ".ts"
   output = output.replace(/\.\w+$/, "") + ext
 
-  const outputPath = join(process.cwd(), output)
+  const outputPath = resolve(output)
   const stringifyPasskey = JSON.stringify(passkey, null, 2)
   const content =
     type === "json"
