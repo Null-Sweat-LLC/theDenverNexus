@@ -2,7 +2,7 @@
   "name": "@test2doc/playwright-passkey-gen",
   "version": "1.0.0",
   "description": "A utility to generate test passkey credentials for WebAuthn testing",
-    "repository": {
+  "repository": {
     "type": "git",
     "url": "git+https://github.com/Null-Sweat-LLC/theDenverNexus.git",
     "directory": "packages/playwright-passkey-gen"
@@ -44,13 +44,13 @@
   "license": "Apache-2.0",
   "packageManager": "pnpm@10.17.1",
   "devDependencies": {
-    "@playwright/test": "^1.62.0",
-    "@simplewebauthn/server": "^13.2.2",
-    "@types/node": "^25.0.10",
+    "@playwright/test": "^1.63.0",
+    "@simplewebauthn/server": "^13.3.3",
+    "@types/node": "^25.9.8",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.8"
+    "vitest": "^4.1.11"
   },
   "dependencies": {
-    "commander": "^14.0.2"
+    "commander": "^14.0.3"
   }
 }

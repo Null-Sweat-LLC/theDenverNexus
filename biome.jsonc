@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.0.2/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
   "vcs": {
     "enabled": false,
     "clientKind": "git",
@@ -12,8 +12,8 @@
       "!**/node_modules/**",
       "!**/dist/**",
       "!**/coverage/**",
-      "!test-results/**",
-      "!playwright-report/**",
+      "!**/test-results/**",
+      "!**/playwright-report/**",
       "!worker-configuration.d.ts"
     ]
   },
@@ -26,7 +26,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "correctness": {
         "noEmptyPattern": "off"
       },

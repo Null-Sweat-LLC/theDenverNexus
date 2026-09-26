@@ -82,12 +82,12 @@
     "@playwright/test": "^1.*.*"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
-    "@types/node": "^25.0.10",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^25.9.8",
     "@types/pngjs": "^6.0.5",
-    "pixelmatch": "^7.1.0",
+    "pixelmatch": "^7.2.0",
     "pngjs": "^7.0.0",
-    "typescript": "^5.9.2",
-    "vitest": "^4.0.8"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
   }
 }

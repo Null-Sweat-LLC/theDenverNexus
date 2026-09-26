@@ -24,23 +24,23 @@
     "apps/*"
   ],
   "devDependencies": {
-    "@biomejs/biome": "^2.3.4",
-    "@commitlint/cli": "^20.1.0",
-    "@commitlint/config-conventional": "^20.0.0",
-    "@playwright/test": "^1.57.0",
+    "@biomejs/biome": "^2.5.14",
+    "@commitlint/cli": "^20.5.3",
+    "@commitlint/config-conventional": "^20.5.3",
+    "@playwright/test": "^1.63.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^12.0.1",
-    "@semantic-release/release-notes-generator": "^14.0.0",
+    "@semantic-release/github": "^12.0.10",
+    "@semantic-release/release-notes-generator": "^14.1.1",
     "husky": "^9.1.7",
-    "semantic-release": "^25.0.2",
+    "semantic-release": "^25.0.9",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.8"
+    "vitest": "^4.1.11"
   },
   "dependencies": {
     "@semantic-release/exec": "^7.1.0",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   }
 }
