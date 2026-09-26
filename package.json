@@ -35,7 +35,7 @@
     "@semantic-release/release-notes-generator": "^14.1.1",
     "husky": "^9.1.7",
     "semantic-release": "^25.0.9",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.11"
   },
   "dependencies": {
