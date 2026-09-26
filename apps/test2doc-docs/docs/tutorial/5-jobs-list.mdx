@@ -190,7 +190,7 @@ To give a very quick crash course on how WebAuthn works. The client's authentica
 
 Our app's backend will give the client a **challenge**, which will be a bunch of random numbers. The client will sign the challenge with the private key and return it to our backend. The backend will verify that the challenge was signed with the private key using the public key. Note that the private key contains the public key, and with the public key it's possible to verify the use of the private key, but it does not reveal the private key, only validates that it was used with the same private key that contains the public key.
 
-So we need a way to generate a public key to store in the `Credentials` table and we'll need to give a private key to the browser Playwright will be running. Luckily, I created a little npm package to handle this. Run:
+So we need a way to generate a key pair: a public key to store in the `Credentials` table, and a private key to give to the browser Playwright will be running. Luckily, I created a little npm package to handle this. Run:
 
 ```sh
 npx @test2doc/playwright-passkey-gen --output src/scripts/test-passkey.ts
@@ -202,17 +202,20 @@ If you look at the output it should look something like this:
 export const TESTPASSKEY = {
   username: "testuser",
   userId: "550e8400-e29b-41d4-a716-446655440000",
-  credentialId: "base64-encoded-credential-id",
-  publicKey: [/* array of numbers */],
-  privateKey: "base64-encoded-private-key",
-  credentialDbId: "base64url-encoded-credential-id",
-  signCount: 1
+  rpId: "localhost",
+  id: "base64url-encoded-credential-id",
+  userHandle: "base64url-encoded-user-handle",
+  privateKey: "base64url-encoded-private-key",
+  publicKey: "base64url-encoded-public-key",
+  cosePublicKey: [/* array of numbers */],
 }
 ```
 
 <details>
 The values are fake for this, so don't copy and paste it.
 </details>
+
+`rpId` is the site the passkey belongs to (the "relying party"), which is `localhost` while we develop. `id`, `userHandle`, `privateKey` and `publicKey` are in the format Playwright's `credentials.create()` expects, which we'll use later to give the passkey to the browser. `cosePublicKey` is the same public key in the format our DB stores.
 
 Now let's add the User and Credential data to the seed file.
 
@@ -238,8 +241,8 @@ await db
   .values({
     id: crypto.randomUUID(),
     userId: TESTPASSKEY.userId,
-    credentialId: TESTPASSKEY.credentialDbId,
-    publicKey: Uint8Array.from(TESTPASSKEY.publicKey),
+    credentialId: TESTPASSKEY.id,
+    publicKey: Uint8Array.from(TESTPASSKEY.cosePublicKey),
     counter: 0,
     createdAt: timeAdded,
   })
@@ -251,7 +254,8 @@ await db
   - We also changed the name from `now` to `timeAdded` just to help clarify that it does not represent the current time.
 - We import our new `TESTPASSKEY` from our newly generated passkey data. We also create a variable to hold the current time. Then we insert our data in to the DB.
 - You'll also see we're using [`crypto`](https://nodejs.org/api/crypto.html) library native to node to generate a random UUID for the credential data.
-- We also need to convert the public key to `Uint8Array` array, which is how `@simplewebauthn` library we're using expects the public key to be.
+- The passkey's `id` is already base64url encoded, which is how our login code looks up credentials, so we can store it as is.
+- For the public key we use `cosePublicKey`, which is in the COSE format the `@simplewebauthn` library we're using stores public keys in. We convert it to a `Uint8Array`, which is how the library expects the public key to be. (`publicKey` is the same key in the format Playwright uses.)
 
 </details>
 
@@ -283,25 +287,7 @@ Now that we have the user and the credentials populated, we should also be able 
 
 Not exactly best practice, but now that we have the test data, we should be able to create a very simple test for authentication.
 
-To help with some of the boilerplate I created a package `@test2doc/playwright-passkey` to make testing authentication a bit easier.
-
-<Tabs groupId="package-managers">
-  <TabItem value="npm" label="npm" default>
-```sh
-npm install --save-dev @test2doc/playwright-passkey
-```
-  </TabItem>
-  <TabItem value="yarn" label="yarn">
-```sh
-yarn add --dev @test2doc/playwright-passkey
-```
-  </TabItem>
-  <TabItem value="pnpm" label="pnpm">
-```sh
-pnpm add --save-dev @test2doc/playwright-passkey
-```
-  </TabItem>
-</Tabs>
+In the Authentication chapter we used Playwright's virtual authenticator to create a new passkey. This time we'll give it the passkey we just seeded, with `credentials.create()`.
 
 Let's add a new test file designed to test the logged in experience.
 
@@ -309,20 +295,17 @@ Let's add a new test file designed to test the logged in experience.
 import { test } from "@playwright/test"
 import { TESTPASSKEY } from "../src/scripts/test-passkey.js"
 import { selectors } from "./util"
-import Database from "better-sqlite3"
-import { enableVirtualAuthenticator, addPasskeyCredential, simulateSuccessfulPasskeyInput } from "@test2doc/playwright-passkey"
 
 test("Can access protected page", async ({ page }) => {
-  const authenticator = await enableVirtualAuthenticator(page)
-
-  await addPasskeyCredential(authenticator, TESTPASSKEY)
+  await page.context().credentials.create(TESTPASSKEY.rpId, TESTPASSKEY)
+  await page.context().credentials.install()
 
   await page.goto("/auth/login")
+  // Wait for the page's JavaScript to finish loading, or the login click can
+  // land before React is ready to handle it
+  await page.waitForLoadState("networkidle")
 
-  await simulateSuccessfulPasskeyInput(
-    authenticator,
-    async () => await page.getByRole(...selectors.buttonLogin).click(),
-  )
+  await page.getByRole(...selectors.buttonLogin).click()
 
   await test
     .expect(page.getByRole("heading", { name: "Applications" }))
@@ -330,20 +313,19 @@ test("Can access protected page", async ({ page }) => {
 })
 ```
 
+- `credentials.create()` adds our seeded passkey to the virtual authenticator. We pass it the `rpId`, then the rest of `TESTPASSKEY`.
+- `credentials.install()` turns the virtual authenticator on, like in the Authentication chapter.
+- We wait for the page to finish loading before clicking the login button. In the Authentication chapter, taking screenshots gave the page time to load. Here we go straight from loading the page to clicking, so without the wait the click can happen before React is ready to handle it, and nothing happens.
+
 If you run this, it should pass.
 
 **BUT** if you run it again it should fail!
 
 So, a clever design of passkeys is the signCount value, which is designed to increment every time you use the passkey. This helps avoid replay attacks, where a third party spying on your internet traffic is able to intercept your request and just sends the same request again.
 
-So the problem is, we're adding the passkey to the virtual authenticator every time. The signed counter is always set to the value we get from our `TESTPASSKEY`.
+So the problem is, every time the test runs, `credentials.create()` adds our passkey to a brand new virtual authenticator, so its counter starts back at `0`. But our DB still has the counter from the last login, so on the second run it looks like the passkey is replaying an old login.
 
-There are 2 ways we can handle this.
-
-1. We increment the `TESTPASSKEY`'s `signCounter` value on every run.
-2. We reset the DB counter value back to `0`.
-
-The problem with solution 1, is that if the tests ever get into an inconsistent state, say if a test fails, and the update function doesn't execute properly, now the `signCounter` is out of sync and this will require us to manually fix the `TESTPASSKEY` data. While, this might seem like an _ok_ trade-off, solution 2 will be less error prone.
+Playwright doesn't let us choose the counter a passkey starts at, so we'll reset the DB counter value back to `0` before we log in instead.
 
 I do not recommend updating the DB for tests _normally_. It violates test isolation, but sadly we don't have much choice in this case. So we'll attempt to make the smallest change possible to make this test pass consistently. (If you come up with a possible better solution, please let [me](https://bsky.app/profile/dethstrobe.bsky.social) know.)
 
@@ -375,13 +357,14 @@ If you use `pnpm` you'll need to add `better-sqlite3` to the approved builds, so
 
 Now we'll update the counter value in the DB before we use the passkey.
 
-```ts {2-3,5-22,27-37} title="tests/loggedin.spec.ts"
+```ts {2-4,6-22,26-36} title="tests/loggedin.spec.ts"
 ...
 import Database from "better-sqlite3"
+import path from "path"
 import fs from "node:fs"
 
 function getTestDbPath(): string {
-    const doDir = path.join(
+  const doDir = path.join(
     ".wrangler",
     "state",
     "v3",
@@ -420,7 +403,7 @@ Let's walk through the code a bit to explain what's happening.
 
 ```ts
 function getTestDbPath(): string {
-    const doDir = path.join(
+  const doDir = path.join(
     ".wrangler",
     "state",
     "v3",
@@ -599,8 +582,8 @@ export default async () => {
     .values({
       id: crypto.randomUUID(),
       userId: TESTPASSKEY.userId,
-      credentialId: TESTPASSKEY.credentialDbId,
-      publicKey: Uint8Array.from(TESTPASSKEY.publicKey),
+      credentialId: TESTPASSKEY.id,
+      publicKey: Uint8Array.from(TESTPASSKEY.cosePublicKey),
       counter: 0,
       createdAt: timeAdded,
     })
@@ -708,20 +691,16 @@ Let's also move our `loggedin.spec.ts` into this directory and rename it to `log
 
 We'll also make a setup file to run the login once and safe the credential to reuse in tests that require a logged-in session.
 
-```ts title="test/loggedin/login.setup.ts" {30,59}
+```ts title="test/loggedin/login.setup.ts" {26,54}
 import { test, expect } from "@playwright/test"
 import { TESTPASSKEY } from "../../src/scripts/test-passkey.js"
 import { selectors } from "../util.js"
 import Database from "better-sqlite3"
-import {
-  enableVirtualAuthenticator,
-  addPasskeyCredential,
-  simulateSuccessfulPasskeyInput,
-} from "@test2doc/playwright-passkey"
+import path from "path"
 import fs from "node:fs"
 
 function getTestDbPath(): string {
-    const doDir = path.join(
+  const doDir = path.join(
     ".wrangler",
     "state",
     "v3",
@@ -752,16 +731,15 @@ test("Login setup", async ({ page }) => {
 
   db.close()
 
-  const authenticator = await enableVirtualAuthenticator(page)
-
-  await addPasskeyCredential(authenticator, TESTPASSKEY)
+  await page.context().credentials.create(TESTPASSKEY.rpId, TESTPASSKEY)
+  await page.context().credentials.install()
 
   await page.goto("/auth/login")
+  // Wait for the page's JavaScript to finish loading, or the login click can
+  // land before React is ready to handle it
+  await page.waitForLoadState("networkidle")
 
-  await simulateSuccessfulPasskeyInput(
-    authenticator,
-    async () => await page.getByRole(...selectors.buttonLogin).click(),
-  )
+  await page.getByRole(...selectors.buttonLogin).click()
 
   await expect(
     page.getByRole("heading", { name: "Applications" }),

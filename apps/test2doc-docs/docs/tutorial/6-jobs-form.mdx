@@ -1827,17 +1827,12 @@ I think I like approach _2_ and would normally recommend it, but we're going to 
 
 Since we'll be connecting to the DB, let's move the `getTestDbPath` from our `login.setup.ts` file to the `util.ts`.
 
-```diff title="tests/loggedin/new-applications.spec.ts"
+```diff title="tests/loggedin/login.setup.ts"
 import { test, expect } from "@playwright/test"
 import { TESTPASSKEY } from "../../src/scripts/test-passkey.js"
-- import { getTestDbPath } from "../util.js"
+- import { selectors } from "../util.js"
 + import { getTestDbPath, selectors } from "../util.js"
 import Database from "better-sqlite3"
-import {
-  enableVirtualAuthenticator,
-  addPasskeyCredential,
-  simulateSuccessfulPasskeyInput,
-} from "@test2doc/playwright-passkey"
 - import path from "path"
 - import fs from "node:fs"
 - 
