@@ -12,3 +12,15 @@ onlyBuiltDependencies:
   - '@prisma/engines'
   - '@tailwindcss/oxide'
   - prisma
+overrides:
+  tar@=7.5.1: '>=7.5.2'
+peerDependencyRules:
+  allowedVersions:
+    '@vitest/runner': '4'
+    '@vitest/snapshot': '4'
+    react: '19'
+    react-dom: '19'
+    vite: '7'
+    vitest: '4'
+    workerd: '1'
+    wrangler: '4'
