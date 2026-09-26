@@ -320,6 +320,11 @@ To style the highlight and label we expose a few properties on the `annotation` 
   - **Description**: How lines of a multi-line label are aligned inside the label box.
   - **Default**: Aligned towards the highlighted element: `"right"` when the label is left of it, `"left"` when the label is right of it, otherwise `"center"`.
 
+- **`filename`**:
+  - **Type**: `string`
+  - **Description**: A fixed file name for the screenshot in the generated docs, so every run writes the same file and overwrites the previous one. `.png` is added if missing. It can't contain `/` or `\`. Use a unique name per screenshot, since two screenshots with the same name overwrite each other. Don't set it in `annotationDefaults`, or every screenshot will share one file. Renamed or removed screenshots aren't cleaned up automatically.
+  - **Default**: `undefined` (named from a hash of the image, e.g. `test2doc-3f2a9c1b7e4d.png`)
+
 - **`fillStyle`**:
   - **Type**: `string`
   - **Description**: The color of the label text. Accepts any valid CSS color value, including hex codes, RGB, RGBA, HSL, or HSLA.

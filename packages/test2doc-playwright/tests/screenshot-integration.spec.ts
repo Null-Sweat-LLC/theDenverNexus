@@ -480,7 +480,7 @@ test("screenshot should take alt text from annotation when provided", async ({
   })
 
   expect(testInfo.attachments[0].name).toMatch(
-    /test2doc-\d+-\d.png:Custom alt text for testing/,
+    /test2doc-\d+-\d+\.png:Custom alt text for testing/,
   )
 
   await screenshot(testInfo, button, {
@@ -488,14 +488,14 @@ test("screenshot should take alt text from annotation when provided", async ({
   })
 
   expect(testInfo.attachments[1].name).toMatch(
-    /test2doc-\d+-\d.png:more better alt text/,
+    /test2doc-\d+-\d+\.png:more better alt text/,
   )
 
   await screenshot(testInfo, button, {
     annotation: { text: "more button or something" },
   })
 
-  expect(testInfo.attachments[2].name).toMatch(/test2doc-\d+-\d.png/)
+  expect(testInfo.attachments[2].name).toMatch(/test2doc-\d+-\d+\.png/)
 })
 
 test("screenshot highlighting element inside dialog - dialog should not render over annotation canvas", async ({
@@ -544,7 +544,7 @@ test("screenshot should support figure and caption metadata for HTML figure elem
   })
 
   expect(testInfo.attachments[0].name).toMatch(
-    /test2doc-\d+-\d.png\[test2doc_screenshot\]:\{"figure":true,"caption":"User login button"\}/,
+    /test2doc-\d+-\d+\.png\[test2doc_screenshot\]:\{"figure":true,"caption":"User login button"\}/,
   )
 
   // Screenshot with figure but no custom caption
@@ -556,7 +556,7 @@ test("screenshot should support figure and caption metadata for HTML figure elem
   })
 
   expect(testInfo.attachments[1].name).toMatch(
-    /test2doc-\d+-\d.png\[test2doc_screenshot\]:\{"figure":true\}/,
+    /test2doc-\d+-\d+\.png\[test2doc_screenshot\]:\{"figure":true\}/,
   )
 
   // Screenshot with figure and caption but no annotation text
@@ -568,7 +568,7 @@ test("screenshot should support figure and caption metadata for HTML figure elem
   })
 
   expect(testInfo.attachments[2].name).toMatch(
-    /test2doc-\d+-\d.png\[test2doc_screenshot\]:\{"figure":true,"caption":"Submit button"\}/,
+    /test2doc-\d+-\d+\.png\[test2doc_screenshot\]:\{"figure":true,"caption":"Submit button"\}/,
   )
 })
 
@@ -656,4 +656,39 @@ test("multi-line labels from line breaks and labelMaxWidth", async ({
     },
   })
   await expectScreenshotToMatch(testInfo, "label-multi-line-wrap.png")
+})
+
+test("screenshot should support a fixed filename", async ({
+  page,
+}, testInfo) => {
+  await setup(page)
+
+  const button = page.getByRole("button", { name: "Click Me" })
+
+  await screenshot(testInfo, button, {
+    annotation: { text: "Test Button", filename: "login-button" },
+  })
+  expect(testInfo.attachments[0].name).toMatch(
+    /test2doc-\d+-\d+\.png\[test2doc_screenshot\]:\{"filename":"login-button.png"\}/,
+  )
+
+  await screenshot(testInfo, button, {
+    annotation: { altText: "Login button", filename: "login-button.png" },
+  })
+  expect(testInfo.attachments[1].name).toMatch(
+    /test2doc-\d+-\d+\.png\[test2doc_screenshot\]:\{"caption":"Login button","filename":"login-button.png"\}/,
+  )
+
+  await screenshot(testInfo, button, {
+    annotation: { figure: true, caption: "Login", filename: "login" },
+  })
+  expect(testInfo.attachments[2].name).toMatch(
+    /test2doc-\d+-\d+\.png\[test2doc_screenshot\]:\{"figure":true,"caption":"Login","filename":"login.png"\}/,
+  )
+
+  await expect(
+    screenshot(testInfo, button, {
+      annotation: { filename: "../escape.png" },
+    }),
+  ).rejects.toThrow('Invalid screenshot filename "../escape.png"')
 })

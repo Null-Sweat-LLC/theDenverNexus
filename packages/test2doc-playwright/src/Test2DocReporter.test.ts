@@ -898,6 +898,59 @@ This is injected markdown content 2
     )
   })
 
+  it("should use a fixed filename for screenshots with filename metadata", () => {
+    const reporter = setup()
+
+    reporter.onBegin(mockFullConfig, mockSuiteForPages)
+    reporter.onStepBegin(mockTestSuccess, createMockTestResult(), mockStep)
+
+    const attachments = [
+      {
+        name: `test2doc-${Date.now() + 500}-1.png[test2doc_screenshot]:${JSON.stringify({ caption: "Login button", filename: "login-button.png" })}`,
+        body: Buffer.from("mock image data 1"),
+        contentType: "image/png",
+      },
+      {
+        name: `test2doc-${Date.now() + 600}-2.png[test2doc_screenshot]:${JSON.stringify({ figure: true, caption: "Login", filename: "login.png" })}`,
+        body: Buffer.from("mock image data 2"),
+        contentType: "image/png",
+      },
+      {
+        name: `test2doc-${Date.now() + 700}-3.png[test2doc_screenshot]:${JSON.stringify({ filename: "../escape.png" })}`,
+        body: Buffer.from("mock image data 3"),
+        contentType: "image/png",
+      },
+    ]
+
+    vi.advanceTimersByTime(800)
+
+    reporter.onStepEnd(
+      mockTestSuccess,
+      createMockTestResult({ attachments }),
+      mockStep,
+    )
+
+    reporter.onTestEnd(mockTestSuccess, createMockTestResult())
+    reporter.onEnd()
+
+    const content = readFileSync(`${tempDir}/test2doc-login-page.mdx`, "utf8")
+
+    expect(content).toContain("![Login button](./login-button.png)")
+    expect(content).toContain("![Login](./login.png)")
+    expect(readFileSync(join(tempDir, "login-button.png"), "utf8")).toBe(
+      "mock image data 1",
+    )
+    expect(readFileSync(join(tempDir, "login.png"), "utf8")).toBe(
+      "mock image data 2",
+    )
+
+    // A path in the filename can't write outside the output directory
+    expect(content).toContain("![screenshot](./escape.png)")
+    expect(readFileSync(join(tempDir, "escape.png"), "utf8")).toBe(
+      "mock image data 3",
+    )
+  })
+
   it("should skip steps with [nodoc] prefix from documentation", () => {
     const reporter = setup()
 

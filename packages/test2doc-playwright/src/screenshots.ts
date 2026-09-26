@@ -42,6 +42,7 @@ export interface AnnotationOptions {
   altText?: string // Alt text for the screenshot image
   figure?: boolean // Whether to wrap screenshot in a figure element
   caption?: string // Caption text for figcaption (defaults to annotation text if not provided)
+  filename?: string // Fixed file name for the screenshot in the generated docs, instead of a content hash
 }
 
 interface ScreenshotOptions extends PageScreenshotOptions {
@@ -53,11 +54,29 @@ interface MultiLocatorScreenshot {
   options?: ScreenshotOptions
 }
 
+const getFilename = (filename: string): string => {
+  if (!filename || /[/\\]/.test(filename)) {
+    throw new Error(
+      `Invalid screenshot filename "${filename}": it must be a non-empty name without path separators`,
+    )
+  }
+  return filename.endsWith(".png") ? filename : `${filename}.png`
+}
+
 const getMetadataSuffix = (annotation: AnnotationOptions): string => {
   if (annotation.figure) {
     return `[test2doc_screenshot]:${JSON.stringify({
       figure: true,
       ...(annotation.caption && { caption: annotation.caption }),
+      ...(annotation.filename && {
+        filename: getFilename(annotation.filename),
+      }),
+    })}`
+  }
+  if (annotation.filename) {
+    return `[test2doc_screenshot]:${JSON.stringify({
+      ...(annotation.altText && { caption: annotation.altText }),
+      filename: getFilename(annotation.filename),
     })}`
   }
   if (annotation.altText) {

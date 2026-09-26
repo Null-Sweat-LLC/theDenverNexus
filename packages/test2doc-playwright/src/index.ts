@@ -8,7 +8,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs"
-import { join } from "node:path"
+import { basename, join } from "node:path"
 import type {
   FullConfig,
   Reporter,
@@ -347,11 +347,19 @@ class Test2DocReporter implements Reporter {
     return `test2doc-${crypto.createHash("sha256").update(image).digest("hex").slice(0, 12)}.png`
   }
 
+  private getScreenshotFilename(screenshot: DocScreenshot): string {
+    const { filename } = this.parseScreenshotMetadata(screenshot.name)
+    // basename keeps a custom name from writing outside the output directory
+    return filename
+      ? basename(filename)
+      : this.generateHashedScreenshotFilename(screenshot.buffer)
+  }
+
   private generateScreenshots(output: string) {
-    this.screenshotMoveQueue.forEach(({ buffer }) => {
-      const filename = this.generateHashedScreenshotFilename(buffer)
+    this.screenshotMoveQueue.forEach((screenshot) => {
+      const filename = this.getScreenshotFilename(screenshot)
       const dest = `${output}/${filename}`
-      writeFileSync(dest, buffer)
+      writeFileSync(dest, screenshot.buffer)
     })
     this.screenshotMoveQueue = []
   }
@@ -428,6 +436,7 @@ class Test2DocReporter implements Reporter {
   private parseScreenshotMetadata(screenshotName: string): {
     caption?: string
     figure?: boolean
+    filename?: string
   } {
     // Check for JSON metadata format: filename.png[test2doc_screenshot]:{"figure":true,"caption":"text"}
     const jsonMatch = screenshotName.match(/\[test2doc_screenshot\]:(.+)$/)
@@ -460,8 +469,8 @@ class Test2DocReporter implements Reporter {
             }
             if (step.screenshot) {
               this.screenshotMoveQueue.push(step.screenshot)
-              const transformedFilename = this.generateHashedScreenshotFilename(
-                step.screenshot.buffer,
+              const transformedFilename = this.getScreenshotFilename(
+                step.screenshot,
               )
 
               // Parse screenshot metadata (supports both legacy :altText and new JSON format)

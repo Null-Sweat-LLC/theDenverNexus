@@ -49,6 +49,11 @@ The text that explains what is being highlighted.
   - **Description**: Adds a `<figcaption>` element with the specified text when `figure` is true. Provides additional context or explanation for the screenshot. If not provided but `figure` is true, no caption will be added.
   - **Default**: `undefined`
 
+- **`filename`**:
+  - **Type**: `string`
+  - **Description**: A fixed file name for the screenshot in the generated docs, so every run writes the same file and overwrites the previous one. `.png` is added if missing. It can't contain `/` or `\`. Use a unique name per screenshot, since two screenshots with the same name overwrite each other. Don't set it in `annotationDefaults`, or every screenshot will share one file. Renamed or removed screenshots aren't cleaned up automatically.
+  - **Default**: `undefined` (named from a hash of the image, e.g. `test2doc-3f2a9c1b7e4d.png`)
+
 - **`fillStyle`**:
   - **Type**: `string`
   - **Description**: The color of the label text. Accepts any valid CSS color value, including hex codes, RGB, RGBA, HSL, or HSLA.
