@@ -31,7 +31,6 @@
     "wrangler": "^4.141.0"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.18.8",
     "@cloudflare/workers-types": "^5.20260926.1",
     "@docusaurus/module-type-aliases": "3.10.2",
     "@docusaurus/tsconfig": "3.10.2",
@@ -39,7 +38,7 @@
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
-    "dotenv": "^17.4.2",
+    "dotenv": "^18.0.4",
     "gray-matter": "^4.0.3",
     "juice": "^12.2.0",
     "marked": "^18.0.14",
