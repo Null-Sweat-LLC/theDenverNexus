@@ -1,0 +1,7 @@
+appId: com.test2doc.maestrodemo
+---
+- runFlow:
+    when:
+      true: ${TEST2DOC == 'true'}
+    commands:
+      - takeScreenshot: ${NAME}

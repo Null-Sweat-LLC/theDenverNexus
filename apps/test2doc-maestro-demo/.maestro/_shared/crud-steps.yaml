@@ -1,31 +1,60 @@
 appId: com.test2doc.maestrodemo
 ---
-- runFlow: wait-for-app.yaml
-
-# Create
 - runFlow:
-    file: add-todo.yaml
-    env:
-      TITLE: Buy milk
-- assertVisible: "☐ Buy milk"
+    label: Open the todo app
+    commands:
+      - runFlow: wait-for-app.yaml
+      - runFlow:
+          file: screenshot.yaml
+          env:
+            NAME: empty-list
+
 - runFlow:
-    file: add-todo.yaml
-    env:
-      TITLE: Walk the dog
-- assertVisible: "☐ Buy milk"
-- assertVisible: "☐ Walk the dog"
+    label: Create todo items
+    commands:
+      - runFlow:
+          file: add-todo.yaml
+          env:
+            TITLE: Buy milk
+      - assertVisible: "☐ Buy milk"
+      - runFlow:
+          file: add-todo.yaml
+          env:
+            TITLE: Walk the dog
+      - assertVisible: "☐ Buy milk"
+      - assertVisible: "☐ Walk the dog"
+      - runFlow:
+          file: screenshot.yaml
+          env:
+            NAME: created
 
-# Mark as done, then not done
-- tapOn: "☐ Buy milk"
-- assertVisible: "☑ Buy milk"
-- assertNotVisible: "☐ Buy milk"
-- tapOn: "☑ Buy milk"
-- assertVisible: "☐ Buy milk"
-- assertNotVisible: "☑ Buy milk"
+- runFlow:
+    label: Mark a todo item as done
+    commands:
+      - tapOn: "☐ Buy milk"
+      - assertVisible: "☑ Buy milk"
+      - assertNotVisible: "☐ Buy milk"
+      - runFlow:
+          file: screenshot.yaml
+          env:
+            NAME: marked-done
 
-# Delete
-- tapOn:
-    text: "Delete"
-    rightOf: "☐ Buy milk"
-- assertNotVisible: "☐ Buy milk"
-- assertVisible: "☐ Walk the dog"
+- runFlow:
+    label: Mark a todo item as not done
+    commands:
+      - tapOn: "☑ Buy milk"
+      - assertVisible: "☐ Buy milk"
+      - assertNotVisible: "☑ Buy milk"
+
+- runFlow:
+    label: Delete a todo item
+    commands:
+      - tapOn:
+          text: "Delete"
+          rightOf: "☐ Buy milk"
+      - assertNotVisible: "☐ Buy milk"
+      - assertVisible: "☐ Walk the dog"
+      - runFlow:
+          file: screenshot.yaml
+          env:
+            NAME: deleted

@@ -1,6 +1,8 @@
 appId: com.test2doc.maestrodemo
+name: Todo CRUD
 tags:
   - native
+  - test2doc
 ---
 - launchApp
 - runFlow: _shared/crud-steps.yaml

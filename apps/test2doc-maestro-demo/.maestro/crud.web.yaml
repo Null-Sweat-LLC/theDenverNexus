@@ -1,6 +1,8 @@
 url: http://localhost:8081
+name: Todo CRUD
 tags:
   - web
+  - test2doc
 ---
 - launchApp
 - runFlow: _shared/crud-steps.yaml
