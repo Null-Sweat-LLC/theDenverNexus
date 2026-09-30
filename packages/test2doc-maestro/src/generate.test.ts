@@ -7,9 +7,9 @@ import {
 } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { PNG as PngCodec } from "pngjs"
 import { beforeEach, describe, expect, it } from "vitest"
 import { generateDocs } from "./generate.js"
+import { isBlue, readPng, solidPng } from "./testUtils/images.js"
 import {
   entry,
   instruction,
@@ -40,12 +40,7 @@ const writeFlow = (
   }
 }
 
-const grayPng = (width: number, height: number) => {
-  const png = new PngCodec({ width, height })
-  png.data.fill(136)
-  for (let i = 3; i < png.data.length; i += 4) png.data[i] = 255
-  return PngCodec.sync.write(png)
-}
+const grayPng = (width: number, height: number) => solidPng(width, height)
 
 const tapLine = (attrs: string) =>
   `10:00:00.000 [ INFO] maestro.Maestro.tap-X: Tapping on element:  UiElement(treeNode=TreeNode(attributes={${attrs}}, children=[], clickable=true), bounds=Bounds(x=0, y=0, width=1, height=1))`
@@ -262,7 +257,7 @@ describe("generateDocs", () => {
 
   describe("highlights", () => {
     const outputPng = () =>
-      PngCodec.sync.read(
+      readPng(
         readFileSync(
           join(
             outputDir,
@@ -270,15 +265,15 @@ describe("generateDocs", () => {
           ),
         ),
       )
+    const marked = () => outputPng().changed().length > 0
 
     it("marks the tapped element on the screenshot before the tap", () => {
-      const source = grayPng(1080, 2400)
       writeFlow(
         inputDir,
         "Todo CRUD",
         fieldFlow(),
         ["before"],
-        source,
+        grayPng(1080, 2400),
         FIELD_LOG,
       )
 
@@ -286,41 +281,66 @@ describe("generateDocs", () => {
 
       const out = outputPng()
       expect([out.width, out.height]).toEqual([1080, 2400])
-      expect(out.data.equals(PngCodec.sync.read(source).data)).toBe(false)
+      expect(marked()).toBe(true)
     })
 
-    it("leaves the screenshot alone when there is no log", () => {
-      const source = grayPng(1080, 2400)
-      writeFlow(inputDir, "Todo CRUD", fieldFlow(), ["before"], source)
-
-      generateDocs({ inputs: [{ dir: inputDir }], outputDir })
-
-      expect(outputPng().data.equals(PngCodec.sync.read(source).data)).toBe(
-        true,
-      )
-    })
-
-    it("leaves the screenshot alone when the log does not show the tap", () => {
-      const source = grayPng(1080, 2400)
+    it("annotates with the step's words", () => {
       writeFlow(
         inputDir,
         "Todo CRUD",
         fieldFlow(),
         ["before"],
-        source,
+        grayPng(1080, 2400),
+        FIELD_LOG,
+      )
+
+      generateDocs({ inputs: [{ dir: inputDir }], outputDir })
+
+      // the label sits away from the element, at x 42..888 and y 310..409
+      const outside = outputPng()
+        .changed()
+        .filter(([, y]) => y < 290 || y > 430)
+      expect(outside.length).toBeGreaterThan(50)
+    })
+
+    it("leaves the screenshot alone when there is no log", () => {
+      writeFlow(
+        inputDir,
+        "Todo CRUD",
+        fieldFlow(),
+        ["before"],
+        grayPng(1080, 2400),
+      )
+
+      generateDocs({ inputs: [{ dir: inputDir }], outputDir })
+
+      expect(marked()).toBe(false)
+    })
+
+    it("leaves the screenshot alone when the log does not show the tap", () => {
+      writeFlow(
+        inputDir,
+        "Todo CRUD",
+        fieldFlow(),
+        ["before"],
+        grayPng(1080, 2400),
         "nothing here",
       )
 
       generateDocs({ inputs: [{ dir: inputDir }], outputDir })
 
-      expect(outputPng().data.equals(PngCodec.sync.read(source).data)).toBe(
-        true,
-      )
+      expect(marked()).toBe(false)
     })
 
     it("works out the scale of an iOS screenshot from its width", () => {
-      const source = grayPng(1206, 2622)
-      writeFlow(inputDir, "Todo CRUD", fieldFlow(), ["before"], source, IOS_LOG)
+      writeFlow(
+        inputDir,
+        "Todo CRUD",
+        fieldFlow(),
+        ["before"],
+        grayPng(1206, 2622),
+        IOS_LOG,
+      )
 
       const result = generateDocs({
         inputs: [{ platform: "ios", dir: inputDir }],
@@ -328,14 +348,18 @@ describe("generateDocs", () => {
       })
 
       expect(result.warnings).toEqual([])
-      expect(outputPng().data.equals(PngCodec.sync.read(source).data)).toBe(
-        false,
-      )
+      expect(marked()).toBe(true)
     })
 
     it("warns and skips the highlight when it cannot tell the iOS scale", () => {
-      const source = grayPng(1234, 2622)
-      writeFlow(inputDir, "Todo CRUD", fieldFlow(), ["before"], source, IOS_LOG)
+      writeFlow(
+        inputDir,
+        "Todo CRUD",
+        fieldFlow(),
+        ["before"],
+        grayPng(1234, 2622),
+        IOS_LOG,
+      )
 
       const result = generateDocs({
         inputs: [{ platform: "ios", dir: inputDir }],
@@ -344,14 +368,18 @@ describe("generateDocs", () => {
 
       expect(result.warnings).toHaveLength(1)
       expect(result.warnings[0]).toMatch(/Todo CRUD.*ios@/)
-      expect(outputPng().data.equals(PngCodec.sync.read(source).data)).toBe(
-        true,
-      )
+      expect(marked()).toBe(false)
     })
 
     it("uses a scale given for the input", () => {
-      const source = grayPng(1234, 2622)
-      writeFlow(inputDir, "Todo CRUD", fieldFlow(), ["before"], source, IOS_LOG)
+      writeFlow(
+        inputDir,
+        "Todo CRUD",
+        fieldFlow(),
+        ["before"],
+        grayPng(1234, 2622),
+        IOS_LOG,
+      )
 
       const result = generateDocs({
         inputs: [{ platform: "ios", scale: 3, dir: inputDir }],
@@ -359,9 +387,27 @@ describe("generateDocs", () => {
       })
 
       expect(result.warnings).toEqual([])
-      expect(outputPng().data.equals(PngCodec.sync.read(source).data)).toBe(
-        false,
+      expect(marked()).toBe(true)
+    })
+
+    it("styles highlights with the annotation defaults it is given", () => {
+      writeFlow(
+        inputDir,
+        "Todo CRUD",
+        fieldFlow(),
+        ["before"],
+        grayPng(1080, 2400),
+        FIELD_LOG,
       )
+
+      generateDocs({
+        inputs: [{ dir: inputDir }],
+        outputDir,
+        annotationDefaults: { highlightStrokeStyle: "rgb(0, 0, 255)" },
+      })
+
+      // the top edge of the element at y 310
+      expect(isBlue(outputPng().pixel(400, 309))).toBe(true)
     })
 
     it("still merges platforms whose elements sit in different places", () => {

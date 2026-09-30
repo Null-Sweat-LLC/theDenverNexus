@@ -9,7 +9,7 @@
     "clear": "docusaurus clear",
     "serve": "docusaurus serve",
     "typecheck": "tsc",
-    "generate": "test2doc-maestro -i android=../test2doc-maestro-demo/maestro-output/android -i ios=../test2doc-maestro-demo/maestro-output/ios -i web=../test2doc-maestro-demo/maestro-output/web -o docs"
+    "generate": "test2doc-maestro -i android=../test2doc-maestro-demo/maestro-output/android -i ios=../test2doc-maestro-demo/maestro-output/ios -i web=../test2doc-maestro-demo/maestro-output/web -o docs --config test2doc-maestro.config.json"
   },
   "dependencies": {
     "@docusaurus/core": "3.10.2",

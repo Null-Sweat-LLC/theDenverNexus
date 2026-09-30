@@ -1,3 +1,5 @@
+import type { AnnotationOptions } from "./annotation.js"
+
 export interface Selector {
   idRegex?: string
   textRegex?: string
@@ -24,10 +26,13 @@ export interface Bounds {
   bottom: number
 }
 
-/** An element a step taps, to mark on the screenshot with that step's number */
+/** An element a step taps, to mark on the screenshot and label with the step's words */
 export interface Highlight {
   bounds: Bounds
-  step: number
+  /** The step's words as plain text */
+  text: string
+  /** Annotation options from the step's label, over the config's defaults */
+  options?: AnnotationOptions
 }
 
 export type Block =

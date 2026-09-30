@@ -1,3 +1,4 @@
+import { parseAnnotationLabel, plainText } from "./annotation.js"
 import type { Block, Bounds, CommandEntry, Flow, Section } from "./types.js"
 
 const commandName = (entry: CommandEntry) => Object.keys(entry.command)[0] ?? ""
@@ -14,7 +15,7 @@ const labelOf = (entry: CommandEntry, name: string) =>
  * goes to the nearest section above it.
  * `tapped` holds the bounds each tap command hit, by sequence number. A
  * labeled tap highlights its element on the nearest screenshot above it in
- * the same section, marked with the number of the step.
+ * the same section, annotated with the step's words.
  */
 export const parseFlow = (
   entries: CommandEntry[],
@@ -73,17 +74,17 @@ export const parseFlow = (
       continue
     }
 
-    const blocks = add({ type: "instruction", text: label }, depth)
+    const { text, options } = parseAnnotationLabel(label)
+    const blocks = add({ type: "instruction", text }, depth)
     const bounds = tapped.get(entry.metadata.sequenceNumber)
     if (
       bounds &&
       lastShot?.blocks === blocks &&
       lastShot.block.type === "screenshot"
     ) {
-      const step = blocks.filter((block) => block.type === "instruction").length
       lastShot.block.highlights = [
         ...(lastShot.block.highlights ?? []),
-        { bounds, step },
+        { bounds, text: plainText(text), ...(options ? { options } : {}) },
       ]
     }
   }

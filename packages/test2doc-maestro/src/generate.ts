@@ -9,6 +9,7 @@ import {
 } from "node:fs"
 import { basename, dirname, join } from "node:path"
 import { annotatePng } from "./annotate.js"
+import type { AnnotationOptions } from "./annotation.js"
 import { mergeFlows } from "./mergeFlows.js"
 import { parseFlow } from "./parseFlow.js"
 import { renderMarkdown } from "./renderMarkdown.js"
@@ -31,6 +32,8 @@ export interface GenerateInput {
 export interface GenerateOptions {
   inputs: GenerateInput[]
   outputDir: string
+  /** Styling for every annotation. A step's own options override it. */
+  annotationDefaults?: AnnotationOptions
 }
 
 export interface GenerateResult {
@@ -71,6 +74,7 @@ interface Run {
 const readRuns = (
   { dir, platform, scale }: GenerateInput,
   warnings: string[],
+  annotationDefaults: AnnotationOptions,
 ) => {
   const commandFiles = findCommandFiles(dir)
   if (commandFiles.length === 0) {
@@ -102,7 +106,12 @@ const readRuns = (
         if (block.highlights?.length) {
           const pixelScale = detectScale(taps, buffer.readUInt32BE(16), scale)
           if (pixelScale) {
-            buffer = annotatePng(buffer, block.highlights, pixelScale)
+            buffer = annotatePng(
+              buffer,
+              block.highlights,
+              pixelScale,
+              annotationDefaults,
+            )
           } else {
             warnings.push(
               `Flow "${name}"${platform ? ` on ${platform}` : ""}: could not work out the iOS screen scale, so the highlights were skipped. Give it, like ${platform ?? "ios"}@3=<dir>`,
@@ -134,13 +143,14 @@ const readRuns = (
 export const generateDocs = ({
   inputs,
   outputDir,
+  annotationDefaults = {},
 }: GenerateOptions): GenerateResult => {
   validateInputs(inputs)
 
   const warnings: string[] = []
   const byFlow = new Map<string, Run[]>()
   for (const input of inputs) {
-    for (const [name, run] of readRuns(input, warnings)) {
+    for (const [name, run] of readRuns(input, warnings, annotationDefaults)) {
       byFlow.set(name, [...(byFlow.get(name) ?? []), run])
     }
   }

@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util"
+import { loadConfig } from "./config.js"
 import { generateDocs } from "./generate.js"
 
 export interface CliIo {
@@ -21,15 +22,22 @@ one labeled input per platform. Screenshots become tabs:
 
   test2doc-maestro -i android=output/android -i web=output/web -o docs
 
-Steps that tap an element are marked on the screenshot taken before them, with
-the step's number. Maestro reports iOS positions in points, so the scale (screenshot
-pixels per point, usually 3 on iPhones) is worked out from the screenshot's width,
-or given: -i ios@3=output/ios
+Steps that tap an element are marked on the screenshot taken before them, with the
+step's words as a label, like @test2doc/playwright's annotations. Style them, or turn
+on arrows, with a config file:
+
+  test2doc-maestro -i android=output/android -o docs --config test2doc-maestro.config.json
+
+Maestro reports iOS positions in points, so the scale (screenshot pixels per point,
+usually 3 on iPhones) is worked out from the screenshot's width, or given:
+
+  test2doc-maestro -i ios@3=output/ios -o docs
 
 Options:
   -i, --input <[platform[@scale]=]dir>  Directory passed to \`maestro test --test-output-dir\`.
                                 Repeat it, with a platform for each, for several platforms. (required)
   -o, --output <dir>            Where to write the docs (default: ./docs)
+  -c, --config <file>           JSON with annotationDefaults, to style the annotations
   -h, --help                    Show this help
 `
 
@@ -42,13 +50,19 @@ const parseInput = (value: string) => {
 }
 
 export const run = (argv: string[], io: CliIo): number => {
-  let values: { input?: string[]; output?: string; help?: boolean }
+  let values: {
+    input?: string[]
+    output?: string
+    config?: string
+    help?: boolean
+  }
   try {
     values = parseArgs({
       args: argv,
       options: {
         input: { type: "string", short: "i", multiple: true },
         output: { type: "string", short: "o" },
+        config: { type: "string", short: "c" },
         help: { type: "boolean", short: "h" },
       },
     }).values
@@ -68,7 +82,11 @@ export const run = (argv: string[], io: CliIo): number => {
   }
 
   try {
+    const { annotationDefaults } = values.config
+      ? loadConfig(values.config)
+      : { annotationDefaults: {} }
     const { pages, screenshots, warnings } = generateDocs({
+      annotationDefaults,
       inputs: values.input.map(parseInput),
       outputDir: values.output ?? "./docs",
     })

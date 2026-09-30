@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import { parseFlow } from "./parseFlow.js"
-import type { Bounds } from "./types.js"
+import type { Bounds, Highlight } from "./types.js"
 import {
   entry,
   instruction,
@@ -192,10 +192,7 @@ describe("parseFlow", () => {
     const boundsFor = (
       ...taps: [{ metadata: { sequenceNumber: number } }, Bounds][]
     ) => new Map(taps.map(([e, b]) => [e.metadata.sequenceNumber, b]))
-    const shotBlock = (
-      path: string,
-      highlights?: { bounds: Bounds; step: number }[],
-    ) => ({
+    const shotBlock = (path: string, highlights?: Highlight[]) => ({
       type: "screenshot",
       path: `takeScreenshot/${path}.png`,
       ...(highlights ? { highlights } : {}),
@@ -211,26 +208,48 @@ describe("parseFlow", () => {
       const flow = parseFlow([sec, shot, step], boundsFor([step, at(5)]))
 
       expect(flow.sections[0]?.blocks[0]).toEqual(
-        shotBlock("before", [{ bounds: at(5), step: 1 }]),
+        shotBlock("before", [{ bounds: at(5), text: "Tap the field" }]),
       )
     })
 
-    it("numbers each highlight like its step in the section", () => {
-      const [sec, shot, first, second] = [
+    it("annotates with the step's words, without its markdown", () => {
+      const [sec, shot, step] = [
         section("Add"),
         screenshot("before"),
-        instruction("Type a name"),
-        instruction("Tap Add"),
+        instruction("Press **Enter** now"),
       ]
 
-      const flow = parseFlow(
-        [sec, shot, first, second],
-        boundsFor([second, at(9)]),
-      )
+      const flow = parseFlow([sec, shot, step], boundsFor([step, at(1)]))
 
       expect(flow.sections[0]?.blocks[0]).toEqual(
-        shotBlock("before", [{ bounds: at(9), step: 2 }]),
+        shotBlock("before", [{ bounds: at(1), text: "Press Enter now" }]),
       )
+    })
+
+    it("takes annotation options from the step's label, and keeps them out of the step's text", () => {
+      const [sec, shot, step] = [
+        section("Add"),
+        screenshot("before"),
+        instruction(
+          'Tap the field [test2doc_annotation]:{"position":"below","text":"Field"}',
+        ),
+      ]
+
+      const flow = parseFlow([sec, shot, step], boundsFor([step, at(1)]))
+
+      expect(flow.sections[0]?.blocks[0]).toEqual(
+        shotBlock("before", [
+          {
+            bounds: at(1),
+            text: "Tap the field",
+            options: { position: "below", text: "Field" },
+          },
+        ]),
+      )
+      expect(flow.sections[0]?.blocks[1]).toEqual({
+        type: "instruction",
+        text: "Tap the field",
+      })
     })
 
     it("collects several taps on one screenshot", () => {
@@ -248,8 +267,8 @@ describe("parseFlow", () => {
 
       expect(flow.sections[0]?.blocks[0]).toEqual(
         shotBlock("before", [
-          { bounds: at(1), step: 1 },
-          { bounds: at(2), step: 2 },
+          { bounds: at(1), text: "One" },
+          { bounds: at(2), text: "Two" },
         ]),
       )
     })
@@ -281,7 +300,7 @@ describe("parseFlow", () => {
 
       expect(flow.sections[0]?.blocks).toEqual([
         shotBlock("first"),
-        shotBlock("second", [{ bounds: at(1), step: 1 }]),
+        shotBlock("second", [{ bounds: at(1), text: "Tap it" }]),
         { type: "instruction", text: "Tap it" },
       ])
     })

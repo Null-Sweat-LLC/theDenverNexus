@@ -1,0 +1,17 @@
+{
+  "annotationDefaults": {
+    "showArrow": true,
+    "font": "bold 14px Arial",
+    "labelMaxWidth": 210,
+    "labelBoxPadding": 8,
+    "labelBoxFillStyle": "rgba(255, 255, 255, 0.96)",
+    "labelBoxStrokeStyle": "rgba(255, 90, 31, 1)",
+    "labelBoxLineWidth": 1.5,
+    "strokeStyle": "rgba(0, 0, 0, 0)",
+    "highlightStrokeStyle": "rgba(255, 90, 31, 1)",
+    "highlightFillStyle": "rgba(255, 90, 31, 0.15)",
+    "highlightLineWidth": 2.5,
+    "arrowStrokeStyle": "rgba(255, 90, 31, 1)",
+    "arrowLineWidth": 2
+  }
+}

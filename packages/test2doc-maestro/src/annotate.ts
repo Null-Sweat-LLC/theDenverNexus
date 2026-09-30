@@ -1,135 +1,309 @@
+import { fileURLToPath } from "node:url"
+import {
+  createCanvas,
+  GlobalFonts,
+  ImageData,
+  type SKRSContext2D,
+} from "@napi-rs/canvas"
 import { PNG } from "pngjs"
+import {
+  type AnnotationOptions,
+  FONT_FAMILY,
+  scaleFont,
+  withFallbackFont,
+} from "./annotation.js"
+import { type Box, getTextAlign, placeLabel } from "./labelPlacement.js"
 import type { Highlight } from "./types.js"
 
-type Rgb = [number, number, number]
+// The drawing below is @test2doc/playwright's annotation rendering, which runs
+// in the browser, ported to a Node canvas so both packages look alike.
 
-const ACCENT: Rgb = [255, 90, 31]
-const WHITE: Rgb = [255, 255, 255]
-const FILL_ALPHA = 0.12
+const FONT_FILE = new URL(
+  "../fonts/inter-latin-400-normal.woff2",
+  import.meta.url,
+)
+let fontRegistered = false
 
-// 3x5 pixel digits, one string of 15 cells per digit, row by row
-const DIGITS: Record<string, string> = {
-  "0": "111101101101111",
-  "1": "010110010010111",
-  "2": "111001111100111",
-  "3": "111001111001111",
-  "4": "101101111001001",
-  "5": "111100111001111",
-  "6": "111100111101111",
-  "7": "111001001001001",
-  "8": "111101111101111",
-  "9": "111101111001111",
+/** Makes sure text draws the same where no fonts are installed, such as a CI container */
+const registerFont = () => {
+  if (fontRegistered) return
+  GlobalFonts.registerFromPath(fileURLToPath(FONT_FILE), FONT_FAMILY)
+  fontRegistered = true
 }
 
-const blend = (png: PNG, x: number, y: number, [r, g, b]: Rgb, alpha = 1) => {
-  if (x < 0 || y < 0 || x >= png.width || y >= png.height) return
-  const i = (png.width * y + x) * 4
-  for (const [offset, value] of [r, g, b].entries()) {
-    const at = i + offset
-    png.data[at] = Math.round((png.data[at] ?? 0) * (1 - alpha) + value * alpha)
-  }
+// Sizes in the options are in layout units. A phone's screenshot is about
+// 400 units wide, so this is how many pixels each one is worth.
+const LAYOUT_WIDTH = 400
+
+interface TextLayout {
+  lines: { text: string; width: number }[]
+  width: number
+  height: number
+  baseline: number
+  lineHeight: number
 }
 
-const fillRect = (
-  png: PNG,
-  left: number,
-  top: number,
-  right: number,
-  bottom: number,
-  color: Rgb,
-  alpha = 1,
-) => {
-  for (let y = top; y < bottom; y++)
-    for (let x = left; x < right; x++) blend(png, x, y, color, alpha)
-}
-
-const strokeRect = (
-  png: PNG,
-  left: number,
-  top: number,
-  right: number,
-  bottom: number,
-  width: number,
-) => {
-  fillRect(png, left, top, right, top + width, ACCENT)
-  fillRect(png, left, bottom - width, right, bottom, ACCENT)
-  fillRect(png, left, top, left + width, bottom, ACCENT)
-  fillRect(png, right - width, top, right, bottom, ACCENT)
-}
-
-const fillCircle = (
-  png: PNG,
-  cx: number,
-  cy: number,
-  radius: number,
-  color: Rgb,
-) => {
-  for (let y = cy - radius; y <= cy + radius; y++)
-    for (let x = cx - radius; x <= cx + radius; x++)
-      if ((x - cx) ** 2 + (y - cy) ** 2 <= radius ** 2) blend(png, x, y, color)
-}
-
-const drawNumber = (
-  png: PNG,
+/** Splits the text on "\n", then word wraps each line to fit `maxWidth` */
+const layoutText = (
+  ctx: SKRSContext2D,
   text: string,
-  cx: number,
-  cy: number,
-  cell: number,
-) => {
-  const width = text.length * 4 * cell - cell
-  const height = 5 * cell
-  let x0 = Math.round(cx - width / 2)
-  const y0 = Math.round(cy - height / 2)
-  for (const char of text) {
-    const glyph = DIGITS[char] ?? ""
-    for (let i = 0; i < glyph.length; i++) {
-      if (glyph[i] === "1") {
-        const gx = x0 + (i % 3) * cell
-        const gy = y0 + Math.floor(i / 3) * cell
-        fillRect(png, gx, gy, gx + cell, gy + cell, WHITE)
+  maxWidth: number,
+): TextLayout => {
+  const measure = (value: string) => ctx.measureText(value).width
+
+  const lines = text.split("\n").flatMap((line) => {
+    const wrapped: string[] = []
+    let current = ""
+    for (const word of line.split(" ")) {
+      const next = current ? `${current} ${word}` : word
+      if (current && measure(next) > maxWidth) {
+        wrapped.push(current)
+        current = word
+      } else {
+        current = next
       }
     }
-    x0 += 4 * cell
+    return [...wrapped, current]
+  })
+
+  const measured = lines.map((value) => ({
+    text: value,
+    width: measure(value),
+  }))
+  const width = Math.max(...measured.map(({ width }) => width))
+  const first = ctx.measureText(lines[0] ?? "")
+
+  // A single line hugs its glyphs, multiple lines use the font's line height
+  if (lines.length === 1) {
+    const ascent = first.actualBoundingBoxAscent
+    const descent = first.actualBoundingBoxDescent
+    return {
+      lines: measured,
+      width,
+      height: ascent + descent,
+      baseline: ascent + descent / 2,
+      lineHeight: 0,
+    }
   }
+
+  const lineHeight = first.fontBoundingBoxAscent + first.fontBoundingBoxDescent
+  return {
+    lines: measured,
+    width,
+    height: lines.length * lineHeight,
+    baseline: first.fontBoundingBoxAscent,
+    lineHeight,
+  }
+}
+
+interface Point {
+  x: number
+  y: number
+}
+
+/** Where a ray from `origin` first crosses the edge of a rectangle */
+const rayRectIntersection = (
+  origin: Point,
+  direction: Point,
+  rect: Box,
+): Point | null => {
+  const candidates: (Point & { t: number })[] = []
+  const { x: rx, y: ry } = origin
+  const { x: dx, y: dy } = direction
+
+  if (dx !== 0) {
+    for (const x of [rect.x, rect.x + rect.width]) {
+      const t = (x - rx) / dx
+      const y = ry + t * dy
+      if (t > 0 && y >= rect.y && y <= rect.y + rect.height)
+        candidates.push({ x, y, t })
+    }
+  }
+  if (dy !== 0) {
+    for (const y of [rect.y, rect.y + rect.height]) {
+      const t = (y - ry) / dy
+      const x = rx + t * dx
+      if (t > 0 && x >= rect.x && x <= rect.x + rect.width)
+        candidates.push({ x, y, t })
+    }
+  }
+
+  const closest = candidates.reduce<(Point & { t: number }) | undefined>(
+    (min, curr) => (!min || curr.t < min.t ? curr : min),
+    undefined,
+  )
+  return closest ? { x: closest.x, y: closest.y } : null
+}
+
+const drawArrow = (
+  ctx: SKRSContext2D,
+  target: Box,
+  labelBox: Box,
+  options: AnnotationOptions,
+  unit: number,
+) => {
+  const targetCenter = {
+    x: target.x + target.width / 2,
+    y: target.y + target.height / 2,
+  }
+  const labelCenter = {
+    x: labelBox.x + labelBox.width / 2,
+    y: labelBox.y + labelBox.height / 2,
+  }
+  const angle = Math.atan2(
+    targetCenter.y - labelCenter.y,
+    targetCenter.x - labelCenter.x,
+  )
+  const direction = { x: Math.cos(angle), y: Math.sin(angle) }
+
+  const start = rayRectIntersection(labelCenter, direction, labelBox)
+  const end = rayRectIntersection(
+    targetCenter,
+    { x: -direction.x, y: -direction.y },
+    target,
+  )
+  if (!start || !end) return
+
+  const color = options.arrowStrokeStyle ?? "rgba(255, 0, 0, 1)"
+  const lineWidth = (options.arrowLineWidth ?? 2) * unit
+
+  ctx.strokeStyle = color
+  ctx.lineWidth = lineWidth
+  ctx.beginPath()
+  ctx.moveTo(start.x, start.y)
+  ctx.lineTo(end.x, end.y)
+  ctx.stroke()
+
+  // The arrowhead sits on the element's edge
+  const head = lineWidth * 5
+  ctx.fillStyle = color
+  ctx.lineJoin = "round"
+  ctx.lineCap = "round"
+  ctx.beginPath()
+  ctx.moveTo(end.x, end.y)
+  ctx.lineTo(
+    end.x - head * Math.cos(angle - Math.PI / 6),
+    end.y - head * Math.sin(angle - Math.PI / 6),
+  )
+  ctx.lineTo(
+    end.x - head * Math.cos(angle + Math.PI / 6),
+    end.y - head * Math.sin(angle + Math.PI / 6),
+  )
+  ctx.closePath()
+  ctx.fill()
+  ctx.stroke()
 }
 
 /**
- * Marks elements on a screenshot: an outline and light tint around each, and a
- * badge with the step's number at its top left corner. `scale` converts the
- * bounds from Maestro's units to the screenshot's pixels.
+ * Marks elements on a screenshot the way @test2doc/playwright does: an outline
+ * and tint on each, and a label with the step's words placed clear of the
+ * element, with an arrow to it if asked. `scale` converts the bounds from
+ * Maestro's units to the screenshot's pixels. `defaults` style every
+ * annotation, and each highlight's own options win over them.
  */
 export const annotatePng = (
   image: Buffer,
   highlights: Highlight[],
   scale: number,
+  defaults: AnnotationOptions,
 ): Buffer => {
   if (highlights.length === 0) return image
+  registerFont()
 
-  const png = PNG.sync.read(image)
-  const stroke = Math.max(3, Math.round(png.width / 200))
-  const pad = stroke * 2
-  const cell = Math.max(3, Math.round(png.width / 200))
-  const radius = Math.ceil(cell * 4.5)
+  // Decode here, because a canvas image only has its pixels a tick after it is loaded
+  const source = PNG.sync.read(image)
+  const viewport = { width: source.width, height: source.height }
+  const canvas = createCanvas(viewport.width, viewport.height)
+  const ctx = canvas.getContext("2d")
+  ctx.putImageData(
+    new ImageData(
+      new Uint8ClampedArray(source.data),
+      source.width,
+      source.height,
+    ),
+    0,
+    0,
+  )
 
-  for (const { bounds, step } of highlights) {
-    const left = Math.round(bounds.left * scale) - pad
-    const top = Math.round(bounds.top * scale) - pad
-    const right = Math.round(bounds.right * scale) + pad
-    const bottom = Math.round(bounds.bottom * scale) + pad
+  const unit = Math.max(1, viewport.width / LAYOUT_WIDTH)
 
-    fillRect(png, left, top, right, bottom, ACCENT, FILL_ALPHA)
-    strokeRect(png, left, top, right, bottom, stroke)
+  for (const highlight of highlights) {
+    const options: AnnotationOptions = { ...defaults, ...highlight.options }
+    const { left, top, right, bottom } = highlight.bounds
+    const target: Box = {
+      x: left * scale,
+      y: top * scale,
+      width: (right - left) * scale,
+      height: (bottom - top) * scale,
+    }
 
-    const digits = String(step).length
-    const cx = Math.min(Math.max(left, radius), png.width - radius - 1)
-    // Sit above the corner so a small element's own label stays readable
-    const cy = Math.min(
-      Math.max(top - Math.round(radius / 2), radius),
-      png.height - radius - 1,
-    )
-    fillCircle(png, cx, cy, radius + Math.max(0, digits - 1) * cell, ACCENT)
-    drawNumber(png, String(step), cx, cy, cell)
+    // The highlight
+    ctx.strokeStyle = options.highlightStrokeStyle ?? "rgba(255, 165, 0, 1)"
+    ctx.lineWidth = (options.highlightLineWidth ?? 2) * unit
+    ctx.strokeRect(target.x, target.y, target.width, target.height)
+    ctx.fillStyle = options.highlightFillStyle ?? "rgba(255, 165, 0, 0.3)"
+    ctx.fillRect(target.x, target.y, target.width, target.height)
+
+    const text = options.text ?? highlight.text
+    if (!text) continue
+
+    // The label
+    ctx.font = withFallbackFont(scaleFont(options.font ?? "14px Arial", unit))
+    const maxWidth =
+      options.labelMaxWidth === undefined
+        ? viewport.width * 0.7
+        : options.labelMaxWidth * unit
+    const layout = layoutText(ctx, text, maxWidth)
+    const padding = (options.labelBoxPadding ?? 4) * unit
+    const labelBox = placeLabel({
+      target,
+      label: {
+        width: layout.width + padding * 2,
+        height: layout.height + padding * 2,
+      },
+      viewport,
+      position: options.position,
+      margin: (options.showArrow ? 24 : 4) * unit,
+    })
+
+    if (options.showArrow) drawArrow(ctx, target, labelBox, options, unit)
+
+    if (options.labelBoxFillStyle || options.labelBoxStrokeStyle) {
+      ctx.fillStyle = options.labelBoxFillStyle ?? "rgba(0, 0, 0, 0)"
+      ctx.strokeStyle = options.labelBoxStrokeStyle ?? "rgba(0, 0, 0, 0)"
+      ctx.lineWidth = (options.labelBoxLineWidth ?? 2) * unit
+      ctx.fillRect(labelBox.x, labelBox.y, labelBox.width, labelBox.height)
+      ctx.strokeRect(labelBox.x, labelBox.y, labelBox.width, labelBox.height)
+    }
+
+    const textAlign = options.textAlign ?? getTextAlign(target, labelBox)
+    const center = {
+      x: labelBox.x + labelBox.width / 2,
+      y: labelBox.y + labelBox.height / 2,
+    }
+    const inset = (labelBox.width - layout.width) / 2
+    const lines = layout.lines.map(({ text: line, width }, index) => ({
+      text: line,
+      x:
+        textAlign === "left"
+          ? labelBox.x + inset
+          : textAlign === "right"
+            ? labelBox.x + labelBox.width - inset - width
+            : center.x - width / 2,
+      y:
+        center.y -
+        layout.height / 2 +
+        layout.baseline +
+        index * layout.lineHeight,
+    }))
+
+    // Outlines first so they don't cover other lines
+    ctx.strokeStyle = options.strokeStyle ?? "rgba(0, 0, 0, 0.1)"
+    ctx.lineWidth = (options.lineWidth ?? 2) * unit
+    for (const { text: line, x, y } of lines) ctx.strokeText(line, x, y)
+    ctx.fillStyle = options.fillStyle ?? "rgba(0, 0, 0, 1)"
+    for (const { text: line, x, y } of lines) ctx.fillText(line, x, y)
   }
 
-  return PNG.sync.write(png)
+  return canvas.toBuffer("image/png")
 }

@@ -16,6 +16,7 @@ test2doc-maestro --input maestro-output --output docs
 | --- | --- |
 | `-i, --input <[platform[@scale]=]dir>` | The directory passed to `--test-output-dir` (required). Repeat it with a platform for each to document several platforms, and add `@scale` for iOS if needed. |
 | `-o, --output <dir>` | Where to write the docs (default `./docs`) |
+| `-c, --config <file>` | JSON with `annotationDefaults`, to style the annotations |
 
 ## Writing flows for docs
 
@@ -66,47 +67,107 @@ as `test2doc-<hash>.png`. Old `test2doc-*` files in the output directory are
 removed first, but only after every flow parsed, so a failed run keeps the
 existing docs.
 
-## Highlighting elements
+## Highlighting and annotating elements
 
-A screenshot marks the elements that the steps after it tap. Each labeled
-`tapOn` between a `takeScreenshot` and the next screenshot or section gets an
-outline around the element it tapped, and a badge with the step's number, so the
-image lines up with the numbered list:
+Screenshots are annotated the same way `@test2doc/playwright` annotates them:
+the element is outlined and tinted, and a label is drawn beside it, with an
+arrow to it if you turn arrows on.
+
+A screenshot marks the elements that the labeled `tapOn` steps after it tap,
+up to the next screenshot or section. The label is the step's words, without
+their markdown. So take the screenshot **before** the tap, while the element is
+still on screen:
 
 ```yaml
 - runFlow:
-    label: Delete a todo item
+    label: Add a todo item
     commands:
       - runFlow:            # takeScreenshot, behind TEST2DOC as above
           file: screenshot.yaml
           env:
-            NAME: delete-before
+            NAME: add-before
       - tapOn:
-          text: Delete
-          label: Tap **Delete** next to the item you want to remove.   # step 1
+          id: todo-input
+          label: Tap the text field at the top of the screen.   # the annotation
 ```
 
-So take the screenshot **before** the tap, while the element is still on screen.
 A screenshot taken after a step shows the result and is left unmarked, and a
 tap without a `label:` is not marked.
+
+### Styling
+
+Give every annotation a style with a JSON config file, the equivalent of
+Playwright's `annotationDefaults`:
+
+```bash
+test2doc-maestro -i android=out/android -o docs --config test2doc-maestro.config.json
+```
+
+```json
+{
+  "annotationDefaults": {
+    "showArrow": true,
+    "font": "bold 14px Arial",
+    "labelMaxWidth": 210,
+    "labelBoxPadding": 8,
+    "labelBoxFillStyle": "rgba(255, 255, 255, 0.96)",
+    "labelBoxStrokeStyle": "rgba(255, 90, 31, 1)",
+    "highlightStrokeStyle": "rgba(255, 90, 31, 1)",
+    "highlightFillStyle": "rgba(255, 90, 31, 0.15)",
+    "arrowStrokeStyle": "rgba(255, 90, 31, 1)"
+  }
+}
+```
+
+The options and their defaults are the same as Playwright's `AnnotationOptions`:
+`text`, `labelMaxWidth`, `textAlign`, `fillStyle`, `font`, `strokeStyle`,
+`lineWidth`, `labelBoxFillStyle`, `labelBoxStrokeStyle`, `labelBoxLineWidth`,
+`labelBoxPadding`, `highlightFillStyle`, `highlightStrokeStyle`,
+`highlightLineWidth`, `position` (`"above"`, `"below"`, `"left"`, `"right"` or
+degrees clockwise from the top), `showArrow`, `arrowStrokeStyle` and
+`arrowLineWidth`. Colors are canvas styles, like CSS colors. An unknown or
+mistyped option fails generation, so typos do not pass silently.
+
+Sizes (line widths, padding, `labelMaxWidth` and the px size in `font`) are in
+layout units, like CSS px, and scale with the screenshot. So one style suits a
+500px wide web screenshot and a 1206px wide iOS one. Labels wrap at 70% of the
+screenshot's width unless `labelMaxWidth` says otherwise.
+
+Text is drawn with the fonts installed where the docs are generated. The Inter
+font is bundled, under the SIL Open Font License (`fonts/Inter-LICENSE.txt`), and
+used wherever the font you ask for is missing, such as in a CI container.
+
+### One annotation's options
+
+Options for a single step go after its label, the same way Playwright's metadata
+is written into titles. They win over the config's defaults and are left out of
+the step's text in the docs:
+
+```yaml
+- tapOn:
+    text: Delete
+    label: 'Tap **Delete** next to the item. [test2doc_annotation]:{"position":"left","labelMaxWidth":150}'
+```
+
+Use `"text"` to annotate with other words than the step's, or `"text": ""` for a
+highlight with no label.
+
+### Where the bounds come from
 
 Maestro writes the matched element's bounds to `maestro.log` only for taps, so
 that is where the highlights come from. The package reads them from the log of
 each flow, and pairs each tap command with the logged element that fits its
-selector. If a tap cannot be found in the log, its highlight is skipped.
+selector. If a tap cannot be found in the log, its annotation is skipped.
 
 iOS reports bounds in points and Android and web in pixels. For iOS the scale
 (screenshot pixels per point) is worked out from the screenshot's width, for
 example 3 for a 1206px wide iPhone screenshot. If the width is not one it
-recognizes, the highlights are skipped with a warning, and you can give the
+recognizes, the annotations are skipped with a warning, and you can give the
 scale yourself:
 
 ```bash
 test2doc-maestro -i android=out/android -i ios@3=out/ios -i web=out/web -o docs
 ```
-
-The badge carries the step number. The step's text is the annotation, so the
-image has no free-form text of its own.
 
 ## Several platforms on one page
 
@@ -132,7 +193,9 @@ names. If they differ, generation fails and says which platforms disagree.
 
 - Only tapped elements can be highlighted, because that is all Maestro logs the
   bounds of. Assertions such as `assertVisible` cannot be marked.
-- Highlights are numbered badges, not text drawn on the image.
+- Labels are only placed clear of their own element, like in
+  `@test2doc/playwright`, so one can cover other parts of the screen. Move it
+  with `position` or narrow it with `labelMaxWidth`.
 - No Docusaurus front matter or categories yet.
 - Screenshots are as Maestro took them. A phone status bar or a dev overlay
   (for example Expo's dev tools button on web) will show up in the docs.

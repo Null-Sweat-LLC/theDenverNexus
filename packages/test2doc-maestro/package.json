@@ -29,7 +29,8 @@
   "types": "dist/index.d.ts",
   "files": [
     "bin",
-    "dist"
+    "dist",
+    "fonts"
   ],
   "publishConfig": {
     "access": "public"
@@ -44,6 +45,7 @@
     "unit": "vitest"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.9",
     "pngjs": "^7.0.0"
   },
   "devDependencies": {

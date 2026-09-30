@@ -1,15 +1,21 @@
-import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs"
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { beforeEach, describe, expect, it } from "vitest"
 import { run } from "./cli.js"
-import { PNG as PngCodec } from "pngjs"
 import {
   entry,
   resetSequence,
   screenshot,
   section,
 } from "./testUtils/commands.js"
+import { isBlue, readPng, solidPng } from "./testUtils/images.js"
 
 const capture = () => {
   const out: string[] = []
@@ -151,8 +157,7 @@ describe("cli", () => {
       join(flowDir, "commands.json"),
       JSON.stringify([step, shot, tap]),
     )
-    const png = new PngCodec({ width: 1234, height: 100 })
-    writeFileSync(join(shots, "s.png"), PngCodec.sync.write(png))
+    writeFileSync(join(shots, "s.png"), solidPng(1234, 100))
     writeFileSync(
       join(flowDir, "logs", "maestro.log"),
       "10:00:00.000 [ INFO] maestro.Maestro.tap-X: Tapping on element:  UiElement(treeNode=TreeNode(attributes={title=, resource-id=x, bounds=[1,2][3,4]}, children=[]))",
@@ -160,5 +165,79 @@ describe("cli", () => {
 
     expect(run(["-i", `ios=${dir}`, "-o", outputDir], io)).toBe(0)
     expect(err.join("")).toMatch(/warning/i)
+  })
+
+  describe("--config", () => {
+    const flowWithTap = () => {
+      const dir = mkdtempSync(join(tmpdir(), "t2d-cli-config-"))
+      const flowDir = join(dir, "run", "Todo CRUD")
+      mkdirSync(join(flowDir, "logs"), { recursive: true })
+      mkdirSync(join(flowDir, "takeScreenshot"), { recursive: true })
+      const [step, shot, tap] = [
+        section("Step"),
+        screenshot("s"),
+        entry("tapOnElement", { depth: 2, label: "Tap it" }),
+      ]
+      tap.command.tapOnElement = { label: "Tap it", selector: { idRegex: "x" } }
+      writeFileSync(
+        join(flowDir, "commands.json"),
+        JSON.stringify([step, shot, tap]),
+      )
+      writeFileSync(
+        join(flowDir, "takeScreenshot", "s.png"),
+        solidPng(400, 800),
+      )
+      writeFileSync(
+        join(flowDir, "logs", "maestro.log"),
+        "10:00:00.000 [ INFO] maestro.Maestro.tap-X: Tapping on element:  UiElement(treeNode=TreeNode(attributes={resource-id=x, bounds=[100,200][300,260]}, children=[]))",
+      )
+      return dir
+    }
+
+    it("styles the annotations with the defaults in the file", () => {
+      const { io } = capture()
+      const config = join(
+        mkdtempSync(join(tmpdir(), "t2d-cfg-")),
+        "config.json",
+      )
+      writeFileSync(
+        config,
+        '{"annotationDefaults":{"highlightStrokeStyle":"rgb(0, 0, 255)"}}',
+      )
+
+      const code = run(
+        ["-i", flowWithTap(), "-o", outputDir, "--config", config],
+        io,
+      )
+
+      const png = readdirSync(outputDir).find((f) => f.endsWith(".png")) ?? ""
+      expect(code).toBe(0)
+      expect(
+        isBlue(readPng(readFileSync(join(outputDir, png))).pixel(200, 199)),
+      ).toBe(true)
+    })
+
+    it("exits 1 with the reason when the config is invalid", () => {
+      const { io, err } = capture()
+      const config = join(
+        mkdtempSync(join(tmpdir(), "t2d-cfg-")),
+        "config.json",
+      )
+      writeFileSync(config, '{"annotationDefaults":{"lineWidth":"thick"}}')
+
+      expect(
+        run(["-i", flowWithTap(), "-o", outputDir, "-c", config], io),
+      ).toBe(1)
+      expect(err.join("")).toContain("lineWidth")
+    })
+
+    it("exits 1 when the config file does not exist", () => {
+      const { io, err } = capture()
+
+      expect(
+        run(["-i", flowWithTap(), "--config", "/no/such/file.json"], io),
+      ).toBe(1)
+      expect(err.join("")).toContain("/no/such/file.json")
+    })
   })
 })

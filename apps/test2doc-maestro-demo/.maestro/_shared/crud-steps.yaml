@@ -6,7 +6,8 @@ appId: com.test2doc.maestrodemo
 # literal labels: Maestro does not resolve variables in most of them.
 #
 # A screenshot highlights the element that the labeled tapOn steps after it tap,
-# marked with the step's number. So take the screenshot before the tap.
+# with the step's words as the annotation. So take the screenshot before the tap.
+# Options for one annotation go after the label: [test2doc_annotation]:{"position":"left","labelMaxWidth":150}
 - runFlow: wait-for-app.yaml
 
 - runFlow:
@@ -105,7 +106,8 @@ appId: com.test2doc.maestrodemo
           # iOS exposes the button as "Delete Buy milk", Android and web as "Delete"
           text: "Delete.*"
           rightOf: "☐ Buy milk"
-          label: Tap **Delete** next to the item you want to remove.
+          # the label goes left of the button, narrow enough to clear the item's text
+          label: 'Tap **Delete** next to the item you want to remove. [test2doc_annotation]:{"position":"left","labelMaxWidth":150}'
       - assertNotVisible: "☐ Buy milk"
       - assertVisible: "☐ Walk the dog"
       - evalScript:
