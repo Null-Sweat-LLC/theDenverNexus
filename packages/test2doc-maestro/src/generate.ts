@@ -1,5 +1,6 @@
 import crypto from "node:crypto"
 import {
+  existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -7,9 +8,11 @@ import {
   writeFileSync,
 } from "node:fs"
 import { basename, dirname, join } from "node:path"
+import { annotatePng } from "./annotate.js"
 import { mergeFlows } from "./mergeFlows.js"
 import { parseFlow } from "./parseFlow.js"
 import { renderMarkdown } from "./renderMarkdown.js"
+import { detectScale, matchTaps, parseTaps } from "./taps.js"
 import type { CommandEntry, Flow } from "./types.js"
 import { convertToKebabCase } from "./utils.js"
 
@@ -18,6 +21,11 @@ export interface GenerateInput {
   dir: string
   /** Which platform this run was on. Required when there are several inputs. */
   platform?: string
+  /**
+   * Screenshot pixels per unit of the bounds Maestro logs. Android and web use
+   * pixels (1). iOS uses points: it is worked out from the screenshot if not given.
+   */
+  scale?: number
 }
 
 export interface GenerateOptions {
@@ -28,6 +36,8 @@ export interface GenerateOptions {
 export interface GenerateResult {
   pages: number
   screenshots: number
+  /** Things that were skipped rather than failed, such as a highlight */
+  warnings: string[]
 }
 
 const findCommandFiles = (inputDir: string) =>
@@ -58,7 +68,10 @@ interface Run {
 }
 
 /** Reads every flow in one input. When a flow ran more than once, the latest run wins. */
-const readRuns = ({ dir, platform }: GenerateInput) => {
+const readRuns = (
+  { dir, platform, scale }: GenerateInput,
+  warnings: string[],
+) => {
   const commandFiles = findCommandFiles(dir)
   if (commandFiles.length === 0) {
     throw new Error(`No commands.json found in ${dir}`)
@@ -73,18 +86,33 @@ const readRuns = ({ dir, platform }: GenerateInput) => {
     )
 
     try {
-      const flow = parseFlow(entries)
+      const logFile = join(flowDir, "logs", "maestro.log")
+      const taps = existsSync(logFile)
+        ? parseTaps(readFileSync(logFile, "utf8"))
+        : []
+      const flow = parseFlow(entries, matchTaps(entries, taps))
       const files: Record<string, string> = {}
       const shots = new Map<string, Buffer>()
-      const paths = [flow.blocks, ...flow.sections.map((s) => s.blocks)]
-        .flat()
-        .flatMap((block) => (block.type === "screenshot" ? [block.path] : []))
+      const blocks = [flow.blocks, ...flow.sections.map((s) => s.blocks)].flat()
 
-      for (const path of paths) {
-        const buffer = readFileSync(join(flowDir, path))
+      for (const block of blocks) {
+        if (block.type !== "screenshot") continue
+        let buffer: Buffer = readFileSync(join(flowDir, block.path))
+
+        if (block.highlights?.length) {
+          const pixelScale = detectScale(taps, buffer.readUInt32BE(16), scale)
+          if (pixelScale) {
+            buffer = annotatePng(buffer, block.highlights, pixelScale)
+          } else {
+            warnings.push(
+              `Flow "${name}"${platform ? ` on ${platform}` : ""}: could not work out the iOS screen scale, so the highlights were skipped. Give it, like ${platform ?? "ios"}@3=<dir>`,
+            )
+          }
+        }
+
         const hash = crypto.createHash("sha256").update(buffer).digest("hex")
         const outputName = `test2doc-${hash.slice(0, 12)}.png`
-        files[path] = outputName
+        files[block.path] = outputName
         shots.set(outputName, buffer)
       }
 
@@ -109,9 +137,10 @@ export const generateDocs = ({
 }: GenerateOptions): GenerateResult => {
   validateInputs(inputs)
 
+  const warnings: string[] = []
   const byFlow = new Map<string, Run[]>()
   for (const input of inputs) {
-    for (const [name, run] of readRuns(input)) {
+    for (const [name, run] of readRuns(input, warnings)) {
       byFlow.set(name, [...(byFlow.get(name) ?? []), run])
     }
   }
@@ -151,5 +180,5 @@ export const generateDocs = ({
     }
   }
 
-  return { pages: pages.size, screenshots: screenshots.size }
+  return { pages: pages.size, screenshots: screenshots.size, warnings }
 }

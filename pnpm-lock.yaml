@@ -262,10 +262,17 @@ importers:
         version: 5.0.2(@opentelemetry/api@1.9.1)(@types/node@26.6.3)(jsdom@27.1.0)(msw@2.12.0(@types/node@26.6.3)(typescript@7.0.2))(vite@7.3.6(@types/node@26.6.3)(jiti@2.6.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/test2doc-maestro:
+    dependencies:
+      pngjs:
+        specifier: ^7.0.0
+        version: 7.0.0
     devDependencies:
       '@types/node':
         specifier: ^26.6.3
         version: 26.6.3
+      '@types/pngjs':
+        specifier: ^6.0.5
+        version: 6.0.5
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
@@ -15686,9 +15693,7 @@ snapshots:
       metro-runtime: 0.84.6
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 

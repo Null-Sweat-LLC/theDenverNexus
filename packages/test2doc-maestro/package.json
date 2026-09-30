@@ -43,8 +43,12 @@
     "test": "vitest run",
     "unit": "vitest"
   },
+  "dependencies": {
+    "pngjs": "^7.0.0"
+  },
   "devDependencies": {
     "@types/node": "^26.6.3",
+    "@types/pngjs": "^6.0.5",
     "typescript": "^7.0.2",
     "vitest": "^5.0.2"
   }

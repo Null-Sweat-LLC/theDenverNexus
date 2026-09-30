@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import { parseFlow } from "./parseFlow.js"
+import type { Bounds } from "./types.js"
 import {
   entry,
   instruction,
@@ -179,5 +180,144 @@ describe("parseFlow", () => {
     expect(() =>
       parseFlow([section("Step"), entry("tapOnElement", { status: "FAILED" })]),
     ).toThrow(/tapOnElement/)
+  })
+
+  describe("highlights", () => {
+    const at = (n: number): Bounds => ({
+      left: n,
+      top: n,
+      right: n + 10,
+      bottom: n + 10,
+    })
+    const boundsFor = (
+      ...taps: [{ metadata: { sequenceNumber: number } }, Bounds][]
+    ) => new Map(taps.map(([e, b]) => [e.metadata.sequenceNumber, b]))
+    const shotBlock = (
+      path: string,
+      highlights?: { bounds: Bounds; step: number }[],
+    ) => ({
+      type: "screenshot",
+      path: `takeScreenshot/${path}.png`,
+      ...(highlights ? { highlights } : {}),
+    })
+
+    it("highlights the element a later step taps on the screenshot before it", () => {
+      const [sec, shot, step] = [
+        section("Add"),
+        screenshot("before"),
+        instruction("Tap the field"),
+      ]
+
+      const flow = parseFlow([sec, shot, step], boundsFor([step, at(5)]))
+
+      expect(flow.sections[0]?.blocks[0]).toEqual(
+        shotBlock("before", [{ bounds: at(5), step: 1 }]),
+      )
+    })
+
+    it("numbers each highlight like its step in the section", () => {
+      const [sec, shot, first, second] = [
+        section("Add"),
+        screenshot("before"),
+        instruction("Type a name"),
+        instruction("Tap Add"),
+      ]
+
+      const flow = parseFlow(
+        [sec, shot, first, second],
+        boundsFor([second, at(9)]),
+      )
+
+      expect(flow.sections[0]?.blocks[0]).toEqual(
+        shotBlock("before", [{ bounds: at(9), step: 2 }]),
+      )
+    })
+
+    it("collects several taps on one screenshot", () => {
+      const [sec, shot, a, b] = [
+        section("S"),
+        screenshot("before"),
+        instruction("One"),
+        instruction("Two"),
+      ]
+
+      const flow = parseFlow(
+        [sec, shot, a, b],
+        boundsFor([a, at(1)], [b, at(2)]),
+      )
+
+      expect(flow.sections[0]?.blocks[0]).toEqual(
+        shotBlock("before", [
+          { bounds: at(1), step: 1 },
+          { bounds: at(2), step: 2 },
+        ]),
+      )
+    })
+
+    it("does not highlight on a screenshot that comes after the tap", () => {
+      const [sec, step, shot] = [
+        section("S"),
+        instruction("Tap it"),
+        screenshot("after"),
+      ]
+
+      const flow = parseFlow([sec, step, shot], boundsFor([step, at(1)]))
+
+      expect(flow.sections[0]?.blocks[1]).toEqual(shotBlock("after"))
+    })
+
+    it("gives a tap to the nearest screenshot above it", () => {
+      const [sec, first, second, step] = [
+        section("S"),
+        screenshot("first"),
+        screenshot("second"),
+        instruction("Tap it"),
+      ]
+
+      const flow = parseFlow(
+        [sec, first, second, step],
+        boundsFor([step, at(1)]),
+      )
+
+      expect(flow.sections[0]?.blocks).toEqual([
+        shotBlock("first"),
+        shotBlock("second", [{ bounds: at(1), step: 1 }]),
+        { type: "instruction", text: "Tap it" },
+      ])
+    })
+
+    it("does not carry a screenshot's highlights into the next section", () => {
+      const [one, shot, two, step] = [
+        section("One"),
+        screenshot("shot"),
+        section("Two"),
+        instruction("Tap it"),
+      ]
+
+      const flow = parseFlow([one, shot, two, step], boundsFor([step, at(1)]))
+
+      expect(flow.sections[0]?.blocks[0]).toEqual(shotBlock("shot"))
+    })
+
+    it("ignores steps whose tap has no bounds", () => {
+      const flow = parseFlow(
+        [section("S"), screenshot("shot"), instruction("Tap it")],
+        new Map(),
+      )
+
+      expect(flow.sections[0]?.blocks[0]).toEqual(shotBlock("shot"))
+    })
+
+    it("ignores bounds for taps that have no label", () => {
+      const [sec, shot, step] = [
+        section("S"),
+        screenshot("shot"),
+        entry("tapOnElement", { depth: 2 }),
+      ]
+
+      const flow = parseFlow([sec, shot, step], boundsFor([step, at(1)]))
+
+      expect(flow.sections[0]?.blocks[0]).toEqual(shotBlock("shot"))
+    })
   })
 })

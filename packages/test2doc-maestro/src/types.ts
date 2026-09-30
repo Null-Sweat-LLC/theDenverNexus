@@ -1,18 +1,39 @@
+export interface Selector {
+  idRegex?: string
+  textRegex?: string
+}
+
+type CommandBody = { label?: string; selector?: Selector } | undefined
+
 export interface CommandEntry {
-  command: Record<string, { label?: string } | undefined>
+  command: Record<string, CommandBody>
   metadata: {
     status: string
     sequenceNumber: number
     depth: number
-    evaluatedCommand?: Record<string, { label?: string } | undefined>
+    evaluatedCommand?: Record<string, CommandBody>
     artifacts?: { type: string; path: string }[]
   }
+}
+
+/** The edges of an element on screen, in the units Maestro reports them in */
+export interface Bounds {
+  left: number
+  top: number
+  right: number
+  bottom: number
+}
+
+/** An element a step taps, to mark on the screenshot with that step's number */
+export interface Highlight {
+  bounds: Bounds
+  step: number
 }
 
 export type Block =
   | { type: "instruction"; text: string }
   | { type: "markdown"; text: string }
-  | { type: "screenshot"; path: string }
+  | { type: "screenshot"; path: string; highlights?: Highlight[] }
 
 export interface Section {
   title: string

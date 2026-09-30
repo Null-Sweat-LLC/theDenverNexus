@@ -122,4 +122,41 @@ describe("mergeFlows", () => {
         .blocks,
     ).toEqual([{ type: "screenshot", images: [{ file: "i.png" }] }])
   })
+
+  it("does not count highlights as a difference between platforms", () => {
+    const withHighlight = (left: number): Flow => ({
+      blocks: [],
+      sections: [
+        {
+          title: "Add",
+          blocks: [
+            {
+              type: "screenshot",
+              path: "takeScreenshot/a.png",
+              highlights: [
+                {
+                  bounds: { left, top: 1, right: left + 5, bottom: 9 },
+                  step: 1,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    const files = { "takeScreenshot/a.png": "a.png" }
+
+    const guide = mergeFlows([
+      { platform: "android", flow: withHighlight(10), files },
+      { platform: "web", flow: withHighlight(99), files },
+    ])
+
+    expect(guide.sections[0]?.blocks[0]).toEqual({
+      type: "screenshot",
+      images: [
+        { platform: "android", file: "a.png" },
+        { platform: "web", file: "a.png" },
+      ],
+    })
+  })
 })

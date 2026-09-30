@@ -4,22 +4,21 @@ appId: com.test2doc.maestrodemo
 # command is a numbered step. The label on an evalScript is written to the page
 # as markdown, so it can be a paragraph or a :::tip / :::warning box. Use
 # literal labels: Maestro does not resolve variables in most of them.
+#
+# A screenshot highlights the element that the labeled tapOn steps after it tap,
+# marked with the step's number. So take the screenshot before the tap.
 - runFlow: wait-for-app.yaml
-
-- runFlow:
-    label: Open the app
-    commands:
-      - evalScript:
-          script: ${0}
-          label: "Open the app. Your todo list starts out empty."
-      - runFlow:
-          file: screenshot.yaml
-          env:
-            NAME: empty-list
 
 - runFlow:
     label: Add a todo item
     commands:
+      - evalScript:
+          script: ${0}
+          label: Open the app. Your todo list starts out empty.
+      - runFlow:
+          file: screenshot.yaml
+          env:
+            NAME: add-before
       - tapOn:
           id: todo-input
           label: Tap the text field at the top of the screen.
@@ -32,11 +31,11 @@ appId: com.test2doc.maestrodemo
       - assertVisible: "☐ Buy milk"
       - evalScript:
           script: ${0}
-          label: "Your new item appears in the list with an empty checkbox (☐)."
+          label: Your new item appears in the list with an empty checkbox (☐).
       - runFlow:
           file: screenshot.yaml
           env:
-            NAME: created
+            NAME: add-after
       - evalScript:
           script: ${0}
           label: |
@@ -52,6 +51,10 @@ appId: com.test2doc.maestrodemo
 - runFlow:
     label: Mark a todo item as done
     commands:
+      - runFlow:
+          file: screenshot.yaml
+          env:
+            NAME: done-before
       - tapOn:
           text: "☐ Buy milk"
           label: Tap the item you have finished.
@@ -59,15 +62,19 @@ appId: com.test2doc.maestrodemo
       - assertNotVisible: "☐ Buy milk"
       - evalScript:
           script: ${0}
-          label: "The checkbox is now checked (☑)."
+          label: The checkbox is now checked (☑).
       - runFlow:
           file: screenshot.yaml
           env:
-            NAME: marked-done
+            NAME: done-after
 
 - runFlow:
     label: Mark a todo item as not done
     commands:
+      - runFlow:
+          file: screenshot.yaml
+          env:
+            NAME: undone-before
       - tapOn:
           text: "☑ Buy milk"
           label: Tap the completed item again.
@@ -75,11 +82,11 @@ appId: com.test2doc.maestrodemo
       - assertNotVisible: "☑ Buy milk"
       - evalScript:
           script: ${0}
-          label: "The checkbox is empty again and the item is back on your list."
+          label: The checkbox is empty again and the item is back on your list.
       - runFlow:
           file: screenshot.yaml
           env:
-            NAME: marked-not-done
+            NAME: undone-after
 
 - runFlow:
     label: Delete a todo item
@@ -90,6 +97,10 @@ appId: com.test2doc.maestrodemo
             :::warning
             Deleting a todo item is permanent. There is no undo.
             :::
+      - runFlow:
+          file: screenshot.yaml
+          env:
+            NAME: delete-before
       - tapOn:
           # iOS exposes the button as "Delete Buy milk", Android and web as "Delete"
           text: "Delete.*"
@@ -99,8 +110,8 @@ appId: com.test2doc.maestrodemo
       - assertVisible: "☐ Walk the dog"
       - evalScript:
           script: ${0}
-          label: "The item is removed and the rest of your list stays as it was."
+          label: The item is removed and the rest of your list stays as it was.
       - runFlow:
           file: screenshot.yaml
           env:
-            NAME: deleted
+            NAME: delete-after

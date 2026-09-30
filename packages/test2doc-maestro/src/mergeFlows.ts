@@ -16,9 +16,14 @@ export const mergeFlows = (variants: Variant[]): Guide => {
   const [first, ...rest] = variants
   if (!first) throw new Error("No flows to merge")
 
-  const signature = JSON.stringify(first.flow)
+  // Where an element sits differs by platform, so highlights are not part of it
+  const structure = (flow: Flow) =>
+    JSON.stringify(flow, (key, value) =>
+      key === "highlights" ? undefined : value,
+    )
+  const signature = structure(first.flow)
   for (const other of rest) {
-    if (JSON.stringify(other.flow) !== signature) {
+    if (structure(other.flow) !== signature) {
       throw new Error(
         `The flow differs between ${first.platform ?? "platform 1"} and ${other.platform ?? "platform 2"}. ` +
           "Both platforms must run the same flow with the same labels and screenshots.",

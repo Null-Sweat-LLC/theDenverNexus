@@ -1,4 +1,4 @@
-import type { Block, CommandEntry, Flow, Section } from "./types.js"
+import type { Block, Bounds, CommandEntry, Flow, Section } from "./types.js"
 
 const commandName = (entry: CommandEntry) => Object.keys(entry.command)[0] ?? ""
 
@@ -12,17 +12,27 @@ const labelOf = (entry: CommandEntry, name: string) =>
  * block, written to the page as is. Any other labeled command is an
  * instruction. Completed screenshots are added in sequence, and every block
  * goes to the nearest section above it.
+ * `tapped` holds the bounds each tap command hit, by sequence number. A
+ * labeled tap highlights its element on the nearest screenshot above it in
+ * the same section, marked with the number of the step.
  */
-export const parseFlow = (entries: CommandEntry[]): Flow => {
+export const parseFlow = (
+  entries: CommandEntry[],
+  tapped: Map<number, Bounds> = new Map(),
+): Flow => {
   const ordered = [...entries].sort(
     (a, b) => a.metadata.sequenceNumber - b.metadata.sequenceNumber,
   )
   const flow: Flow = { blocks: [], sections: [] }
   const open: { depth: number; section: Section }[] = []
 
+  let lastShot: { block: Block; blocks: Block[] } | undefined
+
   const add = (block: Block, depth: number) => {
     const owner = open.findLast((entry) => depth > entry.depth)
-    ;(owner?.section.blocks ?? flow.blocks).push(block)
+    const blocks = owner?.section.blocks ?? flow.blocks
+    blocks.push(block)
+    return blocks
   }
 
   for (const entry of ordered) {
@@ -40,7 +50,10 @@ export const parseFlow = (entries: CommandEntry[]): Flow => {
       const path = entry.metadata.artifacts?.find(
         (artifact) => artifact.type === "TAKE_SCREENSHOT",
       )?.path
-      if (path) add({ type: "screenshot", path }, depth)
+      if (path) {
+        const block: Block = { type: "screenshot", path }
+        lastShot = { block, blocks: add(block, depth) }
+      }
       continue
     }
 
@@ -55,12 +68,24 @@ export const parseFlow = (entries: CommandEntry[]): Flow => {
       continue
     }
 
-    add(
-      name === "evalScriptCommand"
-        ? { type: "markdown", text: label.trim() }
-        : { type: "instruction", text: label },
-      depth,
-    )
+    if (name === "evalScriptCommand") {
+      add({ type: "markdown", text: label.trim() }, depth)
+      continue
+    }
+
+    const blocks = add({ type: "instruction", text: label }, depth)
+    const bounds = tapped.get(entry.metadata.sequenceNumber)
+    if (
+      bounds &&
+      lastShot?.blocks === blocks &&
+      lastShot.block.type === "screenshot"
+    ) {
+      const step = blocks.filter((block) => block.type === "instruction").length
+      lastShot.block.highlights = [
+        ...(lastShot.block.highlights ?? []),
+        { bounds, step },
+      ]
+    }
   }
 
   return flow

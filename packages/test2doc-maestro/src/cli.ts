@@ -6,7 +6,7 @@ export interface CliIo {
   stderr: (text: string) => void
 }
 
-const USAGE = `Usage: test2doc-maestro --input [platform=]<dir> [--output <dir>]
+const USAGE = `Usage: test2doc-maestro --input [platform[@scale]=]<dir> [--output <dir>]
 
 Generate Docusaurus docs from a Maestro run.
 
@@ -21,18 +21,24 @@ one labeled input per platform. Screenshots become tabs:
 
   test2doc-maestro -i android=output/android -i web=output/web -o docs
 
+Steps that tap an element are marked on the screenshot taken before them, with
+the step's number. Maestro reports iOS positions in points, so the scale (screenshot
+pixels per point, usually 3 on iPhones) is worked out from the screenshot's width,
+or given: -i ios@3=output/ios
+
 Options:
-  -i, --input <[platform=]dir>  Directory passed to \`maestro test --test-output-dir\`.
+  -i, --input <[platform[@scale]=]dir>  Directory passed to \`maestro test --test-output-dir\`.
                                 Repeat it, with a platform for each, for several platforms. (required)
   -o, --output <dir>            Where to write the docs (default: ./docs)
   -h, --help                    Show this help
 `
 
-const LABELED_INPUT = /^([A-Za-z][\w-]*)=(.+)$/s
+const LABELED_INPUT = /^([A-Za-z][\w-]*)(?:@(\d+(?:\.\d+)?))?=(.+)$/s
 
 const parseInput = (value: string) => {
-  const [, platform, dir] = value.match(LABELED_INPUT) ?? []
-  return platform && dir ? { platform, dir } : { dir: value }
+  const [, platform, scale, dir] = value.match(LABELED_INPUT) ?? []
+  if (!platform || !dir) return { dir: value }
+  return { platform, dir, ...(scale ? { scale: Number(scale) } : {}) }
 }
 
 export const run = (argv: string[], io: CliIo): number => {
@@ -62,10 +68,11 @@ export const run = (argv: string[], io: CliIo): number => {
   }
 
   try {
-    const { pages, screenshots } = generateDocs({
+    const { pages, screenshots, warnings } = generateDocs({
       inputs: values.input.map(parseInput),
       outputDir: values.output ?? "./docs",
     })
+    for (const warning of warnings) io.stderr(`warning: ${warning}\n`)
     io.stdout(
       `Generated ${pages} page${pages === 1 ? "" : "s"} and ${screenshots} screenshot${screenshots === 1 ? "" : "s"}\n`,
     )

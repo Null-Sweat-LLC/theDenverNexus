@@ -3,7 +3,13 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { beforeEach, describe, expect, it } from "vitest"
 import { run } from "./cli.js"
-import { resetSequence, section } from "./testUtils/commands.js"
+import { PNG as PngCodec } from "pngjs"
+import {
+  entry,
+  resetSequence,
+  screenshot,
+  section,
+} from "./testUtils/commands.js"
 
 const capture = () => {
   const out: string[] = []
@@ -112,5 +118,47 @@ describe("cli", () => {
 
     expect(run(["-i", inputDir, "-i", inputDir, "-o", outputDir], io)).toBe(1)
     expect(err.join("")).toMatch(/platform/)
+  })
+
+  it("reads a scale after the platform, like ios@3=dir", () => {
+    const { io } = capture()
+    const dir = mkdtempSync(join(tmpdir(), "t2d-cli-scale-"))
+    const flowDir = join(dir, "run", "Todo CRUD")
+    mkdirSync(flowDir, { recursive: true })
+    writeFileSync(
+      join(flowDir, "commands.json"),
+      JSON.stringify([section("Step")]),
+    )
+
+    expect(run(["-i", `ios@3=${dir}`, "-o", outputDir], io)).toBe(0)
+    expect(readdirSync(outputDir)).toEqual(["test2doc-todo-crud.mdx"])
+  })
+
+  it("prints warnings to stderr and still succeeds", () => {
+    const { io, err } = capture()
+    const dir = mkdtempSync(join(tmpdir(), "t2d-cli-warn-"))
+    const flowDir = join(dir, "run", "Todo CRUD")
+    const shots = join(flowDir, "takeScreenshot")
+    mkdirSync(join(flowDir, "logs"), { recursive: true })
+    mkdirSync(shots, { recursive: true })
+    const [step, shot, tap] = [
+      section("Step"),
+      screenshot("s"),
+      entry("tapOnElement", { depth: 2, label: "Tap it" }),
+    ]
+    tap.command.tapOnElement = { label: "Tap it", selector: { idRegex: "x" } }
+    writeFileSync(
+      join(flowDir, "commands.json"),
+      JSON.stringify([step, shot, tap]),
+    )
+    const png = new PngCodec({ width: 1234, height: 100 })
+    writeFileSync(join(shots, "s.png"), PngCodec.sync.write(png))
+    writeFileSync(
+      join(flowDir, "logs", "maestro.log"),
+      "10:00:00.000 [ INFO] maestro.Maestro.tap-X: Tapping on element:  UiElement(treeNode=TreeNode(attributes={title=, resource-id=x, bounds=[1,2][3,4]}, children=[]))",
+    )
+
+    expect(run(["-i", `ios=${dir}`, "-o", outputDir], io)).toBe(0)
+    expect(err.join("")).toMatch(/warning/i)
   })
 })
