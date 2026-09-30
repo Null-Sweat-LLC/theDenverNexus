@@ -1,0 +1,5 @@
+appId: com.test2doc.maestrodemo
+---
+- extendedWaitUntil:
+    visible: "Todo"
+    timeout: 60000

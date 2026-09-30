@@ -1,0 +1,6 @@
+appId: com.test2doc.maestrodemo
+---
+- tapOn:
+    id: todo-input
+- inputText: ${TITLE}
+- pressKey: Enter

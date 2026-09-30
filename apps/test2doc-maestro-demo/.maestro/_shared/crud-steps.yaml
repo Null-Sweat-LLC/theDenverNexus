@@ -1,0 +1,31 @@
+appId: com.test2doc.maestrodemo
+---
+- runFlow: wait-for-app.yaml
+
+# Create
+- runFlow:
+    file: add-todo.yaml
+    env:
+      TITLE: Buy milk
+- assertVisible: "☐ Buy milk"
+- runFlow:
+    file: add-todo.yaml
+    env:
+      TITLE: Walk the dog
+- assertVisible: "☐ Buy milk"
+- assertVisible: "☐ Walk the dog"
+
+# Mark as done, then not done
+- tapOn: "☐ Buy milk"
+- assertVisible: "☑ Buy milk"
+- assertNotVisible: "☐ Buy milk"
+- tapOn: "☑ Buy milk"
+- assertVisible: "☐ Buy milk"
+- assertNotVisible: "☑ Buy milk"
+
+# Delete
+- tapOn:
+    text: "Delete"
+    rightOf: "☐ Buy milk"
+- assertNotVisible: "☐ Buy milk"
+- assertVisible: "☐ Walk the dog"

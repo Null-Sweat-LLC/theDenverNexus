@@ -1,0 +1,6 @@
+url: http://localhost:8081
+tags:
+  - web
+---
+- launchApp
+- runFlow: _shared/crud-steps.yaml

@@ -1,4 +1,0 @@
-url: http://localhost:8081
----
-- launchApp
-- runFlow: _shared/smoke-steps.yaml

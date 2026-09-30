@@ -1,0 +1,6 @@
+appId: com.test2doc.maestrodemo
+tags:
+  - native
+---
+- launchApp
+- runFlow: _shared/crud-steps.yaml
