@@ -1,0 +1,35 @@
+{
+  "branches": ["main"],
+  "tagFormat": "test2doc-maestro-v${version}",
+  "repositoryUrl": "https://github.com/Null-Sweat-LLC/theDenverNexus",
+  "plugins": [
+    [
+      "./sr-path-filter.js",
+      {
+        "preset": "conventionalcommits",
+        "releaseRules": [
+          { "type": "feat", "release": "minor" },
+          { "type": "fix", "release": "patch" },
+          { "type": "perf", "release": "patch" },
+          { "type": "revert", "release": "patch" }
+        ]
+      }
+    ],
+    ["@semantic-release/changelog"],
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "pnpm build && sed -i.bak 's/\"version\": \"[^\"]*\"/\"version\": \"${nextRelease.version}\"/' package.json && rm package.json.bak",
+        "publishCmd": "npm publish --provenance --access public"
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["package.json", "CHANGELOG.md"],
+        "message": "chore(release): test2doc-maestro-v${nextRelease.version} [skip ci]"
+      }
+    ],
+    ["@semantic-release/github"]
+  ]
+}
