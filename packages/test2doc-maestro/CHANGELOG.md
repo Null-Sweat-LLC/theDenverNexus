@@ -1,3 +1,9 @@
+## [0.1.1](https://github.com/Null-Sweat-LLC/theDenverNexus/compare/test2doc-maestro-v0.1.0...test2doc-maestro-v0.1.1) (2026-09-30)
+
+### Bug Fixes
+
+* **test2doc-maestro:** document installation and setup in the README ([9db71ff](https://github.com/Null-Sweat-LLC/theDenverNexus/commit/9db71ff9c70249783aeb88c09855cfb2450a29b1)), references [#518](https://github.com/Null-Sweat-LLC/theDenverNexus/issues/518)
+
 ## [0.1.0](https://github.com/Null-Sweat-LLC/theDenverNexus/compare/test2doc-maestro-v0.0.0...test2doc-maestro-v0.1.0) (2026-09-30)
 
 ### Features
