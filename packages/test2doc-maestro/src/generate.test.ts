@@ -50,7 +50,7 @@ describe("generateDocs", () => {
     expect(readdirSync(outputDir)).toEqual(["test2doc-todo-crud.mdx"])
     expect(
       readFileSync(join(outputDir, "test2doc-todo-crud.mdx"), "utf8"),
-    ).toBe("# Todo CRUD\n\nCreate todo items\n\n")
+    ).toBe("# Todo CRUD\n\n## Create todo items\n\n")
   })
 
   it("copies screenshots next to the page under a content-hashed name", () => {
@@ -68,7 +68,7 @@ describe("generateDocs", () => {
     expect(readFileSync(join(outputDir, png ?? ""))).toEqual(PNG)
     expect(
       readFileSync(join(outputDir, "test2doc-todo-crud.mdx"), "utf8"),
-    ).toContain(`![screenshot](./${png})`)
+    ).toContain(`![Create todo items](./${png})`)
   })
 
   it("removes old test2doc files but leaves everything else", () => {

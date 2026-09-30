@@ -1,50 +1,139 @@
 import { describe, expect, it } from "vitest"
 import { renderMarkdown } from "./renderMarkdown.js"
+import type { Block, Flow } from "./types.js"
+
+const names = { "takeScreenshot/a.png": "test2doc-a.png" }
+const flowOf = (title: string, blocks: Block[]): Flow => ({
+  blocks: [],
+  sections: [{ title, blocks }],
+})
 
 describe("renderMarkdown", () => {
   it("renders the flow name as the h1", () => {
-    const md = renderMarkdown("Todo CRUD", { screenshots: [], steps: [] }, {})
+    const md = renderMarkdown("Manage todos", { blocks: [], sections: [] }, {})
 
-    expect(md).toBe("# Todo CRUD\n\n")
+    expect(md).toBe("# Manage todos\n\n")
   })
 
-  it("renders each step title followed by its screenshots", () => {
+  it("renders each section as an h2", () => {
+    const md = renderMarkdown("Guide", flowOf("Add a todo item", []), {})
+
+    expect(md).toBe("# Guide\n\n## Add a todo item\n\n")
+  })
+
+  it("numbers instructions, restarting in each section", () => {
     const md = renderMarkdown(
-      "Todo CRUD",
+      "Guide",
       {
-        screenshots: [],
-        steps: [
-          { title: "Create todo items", screenshots: ["takeScreenshot/a.png"] },
-          { title: "Delete a todo item", screenshots: [] },
+        blocks: [],
+        sections: [
+          {
+            title: "One",
+            blocks: [
+              { type: "instruction", text: "Tap the field" },
+              { type: "instruction", text: "Type a name" },
+            ],
+          },
+          {
+            title: "Two",
+            blocks: [{ type: "instruction", text: "Tap Delete" }],
+          },
         ],
       },
-      { "takeScreenshot/a.png": "test2doc-abc.png" },
+      {},
     )
 
-    expect(md).toBe(
-      [
-        "# Todo CRUD",
-        "",
-        "Create todo items",
-        "![screenshot](./test2doc-abc.png)",
-        "",
-        "Delete a todo item",
-        "",
-        "",
-      ].join("\n"),
+    expect(md).toContain("1. Tap the field\n\n2. Type a name\n\n")
+    expect(md).toContain("## Two\n\n1. Tap Delete\n\n")
+  })
+
+  it("nests a screenshot under the instruction it follows", () => {
+    const md = renderMarkdown(
+      "Guide",
+      flowOf("Add", [
+        { type: "instruction", text: "Press Enter" },
+        { type: "screenshot", path: "takeScreenshot/a.png" },
+      ]),
+      names,
+    )
+
+    expect(md).toContain(
+      "1. Press Enter\n\n   ![Press Enter](./test2doc-a.png)\n\n",
     )
   })
 
-  it("renders flow-level screenshots before the steps", () => {
+  it("keeps the numbering going across a screenshot", () => {
     const md = renderMarkdown(
-      "Flow",
-      {
-        screenshots: ["takeScreenshot/intro.png"],
-        steps: [{ title: "Step", screenshots: [] }],
-      },
-      { "takeScreenshot/intro.png": "test2doc-intro.png" },
+      "Guide",
+      flowOf("Add", [
+        { type: "instruction", text: "First" },
+        { type: "screenshot", path: "takeScreenshot/a.png" },
+        { type: "instruction", text: "Second" },
+      ]),
+      names,
     )
 
-    expect(md.indexOf("test2doc-intro.png")).toBeLessThan(md.indexOf("Step"))
+    expect(md).toContain("2. Second\n\n")
+  })
+
+  it("renders a screenshot that follows other content on its own, alt text is the section title", () => {
+    const md = renderMarkdown(
+      "Guide",
+      flowOf("Mark it done", [
+        { type: "text", text: "It is checked now." },
+        { type: "screenshot", path: "takeScreenshot/a.png" },
+      ]),
+      names,
+    )
+
+    expect(md).toContain(
+      "It is checked now.\n\n![Mark it done](./test2doc-a.png)\n\n",
+    )
+  })
+
+  it("renders text as a paragraph", () => {
+    const md = renderMarkdown(
+      "Guide",
+      flowOf("Add", [{ type: "text", text: "Your list starts empty." }]),
+      {},
+    )
+
+    expect(md).toContain("## Add\n\nYour list starts empty.\n\n")
+  })
+
+  it.each(["note", "tip", "info", "warning", "danger"] as const)(
+    "renders a %s callout as a Docusaurus admonition",
+    (kind) => {
+      const md = renderMarkdown(
+        "Guide",
+        flowOf("Delete", [{ type: "callout", kind, text: "Heads up." }]),
+        {},
+      )
+
+      expect(md).toContain(`:::${kind}\nHeads up.\n:::\n\n`)
+    },
+  )
+
+  it("renders blocks that come before the first section, using the flow name as alt text", () => {
+    const md = renderMarkdown(
+      "Guide",
+      {
+        blocks: [{ type: "screenshot", path: "takeScreenshot/a.png" }],
+        sections: [{ title: "Add", blocks: [] }],
+      },
+      names,
+    )
+
+    expect(md).toBe("# Guide\n\n![Guide](./test2doc-a.png)\n\n## Add\n\n")
+  })
+
+  it("fails when a screenshot has no output file", () => {
+    expect(() =>
+      renderMarkdown(
+        "Guide",
+        flowOf("Add", [{ type: "screenshot", path: "takeScreenshot/a.png" }]),
+        {},
+      ),
+    ).toThrow(/takeScreenshot\/a\.png/)
   })
 })

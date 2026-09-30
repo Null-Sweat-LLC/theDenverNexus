@@ -1,14 +1,9 @@
-import type { Flow } from "./types.js"
-
-const image = (path: string, outputNames: Record<string, string>) => {
-  const name = outputNames[path]
-  if (!name) throw new Error(`No output file for screenshot ${path}`)
-  return `![screenshot](./${name})\n`
-}
+import type { Block, Flow } from "./types.js"
 
 /**
- * Renders a flow as markdown in the same shape @test2doc/playwright writes:
- * an h1 for the page, then each step title followed by its screenshots.
+ * Renders a flow as a how-to guide in markdown: an h1 for the flow, an h2 per
+ * section, numbered instructions with their screenshots nested under them,
+ * and Docusaurus admonitions for callouts.
  * `outputNames` maps a screenshot's path in the run output to its file name.
  */
 export const renderMarkdown = (
@@ -16,18 +11,43 @@ export const renderMarkdown = (
   flow: Flow,
   outputNames: Record<string, string>,
 ) => {
-  let markdown = `# ${name}\n\n`
+  const renderBlocks = (blocks: Block[], fallbackAlt: string) => {
+    let markdown = ""
+    let step = 0
+    let previous: Block | undefined
 
-  if (flow.screenshots.length > 0) {
-    markdown += `${flow.screenshots.map((path) => image(path, outputNames)).join("")}\n`
+    for (const block of blocks) {
+      switch (block.type) {
+        case "instruction":
+          markdown += `${++step}. ${block.text}\n\n`
+          break
+        case "text":
+          markdown += `${block.text}\n\n`
+          break
+        case "callout":
+          markdown += `:::${block.kind}\n${block.text}\n:::\n\n`
+          break
+        case "screenshot": {
+          const file = outputNames[block.path]
+          if (!file)
+            throw new Error(`No output file for screenshot ${block.path}`)
+          const follows =
+            previous?.type === "instruction" ? previous : undefined
+          const indent = follows ? " ".repeat(`${step}. `.length) : ""
+          markdown += `${indent}![${follows?.text ?? fallbackAlt}](./${file})\n\n`
+          break
+        }
+      }
+      previous = block
+    }
+
+    return markdown
   }
 
-  for (const step of flow.steps) {
-    markdown += `${step.title}\n`
-    markdown += step.screenshots
-      .map((path) => image(path, outputNames))
-      .join("")
-    markdown += "\n"
+  let markdown = `# ${name}\n\n${renderBlocks(flow.blocks, name)}`
+
+  for (const section of flow.sections) {
+    markdown += `## ${section.title}\n\n${renderBlocks(section.blocks, section.title)}`
   }
 
   return markdown

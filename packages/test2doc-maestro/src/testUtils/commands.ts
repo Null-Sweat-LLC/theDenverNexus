@@ -1,10 +1,10 @@
-import type { CommandEntry } from "../types.js"
+import type { CalloutKind, CommandEntry } from "../types.js"
 
 type Options = {
   depth?: number
   status?: string
   label?: string
-  evaluatedCommand?: Record<string, unknown>
+  evaluatedLabel?: string
   artifacts?: { type: string; path: string }[]
 }
 
@@ -16,24 +16,41 @@ export const resetSequence = () => {
 
 export const entry = (
   commandName: string,
-  { depth = 0, status = "COMPLETED", label, ...rest }: Options = {},
+  {
+    depth = 0,
+    status = "COMPLETED",
+    label,
+    evaluatedLabel,
+    artifacts,
+  }: Options = {},
 ): CommandEntry => ({
   command: { [commandName]: label ? { label } : {} },
   metadata: {
     status,
     sequenceNumber: sequenceNumber++,
     depth,
-    ...rest,
+    ...(evaluatedLabel
+      ? { evaluatedCommand: { [commandName]: { label: evaluatedLabel } } }
+      : {}),
+    ...(artifacts ? { artifacts } : {}),
   },
 })
 
 export const section = (label: string, depth = 1) =>
   entry("runFlowCommand", { depth, label })
 
+export const instruction = (label: string, depth = 2) =>
+  entry("tapOnElement", { depth, label })
+
+export const callout = (kind: CalloutKind, text: string, depth = 2) =>
+  entry("evalScriptCommand", { depth, label: `[${kind}] ${text}` })
+
+export const text = (label: string, depth = 2) =>
+  entry("evalScriptCommand", { depth, label: `[text] ${label}` })
+
 export const screenshot = (name: string, depth = 4) =>
   entry("takeScreenshotCommand", {
     depth,
-    evaluatedCommand: { takeScreenshotCommand: { path: name } },
     artifacts: [
       { type: "TAKE_SCREENSHOT", path: `takeScreenshot/${name}.png` },
     ],

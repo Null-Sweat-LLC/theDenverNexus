@@ -1,39 +1,62 @@
 appId: com.test2doc.maestrodemo
 ---
+# Labels become the docs. A labeled runFlow is a section, any other labeled
+# command is a numbered step, and a label starting with [text], [note], [tip],
+# [info], [warning] or [danger] becomes a paragraph or callout. Use literal
+# labels: Maestro does not resolve variables in most of them.
+- runFlow: wait-for-app.yaml
+
 - runFlow:
-    label: Open the todo app
+    label: Open the app
     commands:
-      - runFlow: wait-for-app.yaml
+      - evalScript:
+          script: ${0}
+          label: "[text] Open the app. Your todo list starts out empty."
       - runFlow:
           file: screenshot.yaml
           env:
             NAME: empty-list
 
 - runFlow:
-    label: Create todo items
+    label: Add a todo item
     commands:
-      - runFlow:
-          file: add-todo.yaml
-          env:
-            TITLE: Buy milk
+      - tapOn:
+          id: todo-input
+          label: Tap the text field at the top of the screen.
+      - inputText:
+          text: Buy milk
+          label: Type what you need to do.
+      - pressKey:
+          key: Enter
+          label: Press **Enter** on the keyboard.
       - assertVisible: "☐ Buy milk"
-      - runFlow:
-          file: add-todo.yaml
-          env:
-            TITLE: Walk the dog
-      - assertVisible: "☐ Buy milk"
-      - assertVisible: "☐ Walk the dog"
+      - evalScript:
+          script: ${0}
+          label: "[text] Your new item appears in the list with an empty checkbox (☐)."
       - runFlow:
           file: screenshot.yaml
           env:
             NAME: created
+      - evalScript:
+          script: ${0}
+          label: "[tip] Repeat these steps to add as many items as you like."
+      - runFlow:
+          file: add-todo.yaml
+          env:
+            TITLE: Walk the dog
+      - assertVisible: "☐ Walk the dog"
 
 - runFlow:
     label: Mark a todo item as done
     commands:
-      - tapOn: "☐ Buy milk"
+      - tapOn:
+          text: "☐ Buy milk"
+          label: Tap the item you have finished.
       - assertVisible: "☑ Buy milk"
       - assertNotVisible: "☐ Buy milk"
+      - evalScript:
+          script: ${0}
+          label: "[text] The checkbox is now checked (☑)."
       - runFlow:
           file: screenshot.yaml
           env:
@@ -42,18 +65,34 @@ appId: com.test2doc.maestrodemo
 - runFlow:
     label: Mark a todo item as not done
     commands:
-      - tapOn: "☑ Buy milk"
+      - tapOn:
+          text: "☑ Buy milk"
+          label: Tap the completed item again.
       - assertVisible: "☐ Buy milk"
       - assertNotVisible: "☑ Buy milk"
+      - evalScript:
+          script: ${0}
+          label: "[text] The checkbox is empty again and the item is back on your list."
+      - runFlow:
+          file: screenshot.yaml
+          env:
+            NAME: marked-not-done
 
 - runFlow:
     label: Delete a todo item
     commands:
+      - evalScript:
+          script: ${0}
+          label: "[warning] Deleting a todo item is permanent. There is no undo."
       - tapOn:
-          text: "Delete"
+          text: Delete
           rightOf: "☐ Buy milk"
+          label: Tap **Delete** next to the item you want to remove.
       - assertNotVisible: "☐ Buy milk"
       - assertVisible: "☐ Walk the dog"
+      - evalScript:
+          script: ${0}
+          label: "[text] The item is removed and the rest of your list stays as it was."
       - runFlow:
           file: screenshot.yaml
           env:

@@ -19,26 +19,49 @@ test2doc-maestro --input maestro-output --output docs
 
 ## Writing flows for docs
 
-- Wrap each documented step in a `runFlow` with a `label:`. The label becomes
-  the step text. Unlabeled commands are ignored.
-- Use `takeScreenshot` for images, gated so regular test runs skip them:
+The page reads like a how-to guide, built from the `label:`s in your flow. The
+flow's `name:` is the page title.
+
+| In the flow | In the docs |
+| --- | --- |
+| `runFlow` with a `label:` | A section heading (`##`) |
+| Any other command with a `label:` | A numbered step |
+| A label starting with `[text]` | A paragraph |
+| A label starting with `[note]`, `[tip]`, `[info]`, `[warning]` or `[danger]` | A Docusaurus admonition |
+| `takeScreenshot` | An image. After a step it is nested under that step. |
+
+Commands without a label are ignored, so assertions and setup stay out of the
+docs. Labels only carry text, so put a callout or paragraph on a no-op command
+such as `evalScript`. Keep screenshots behind `TEST2DOC` so regular test runs
+skip them.
 
 ```yaml
+name: Manage your todo list
+---
 - runFlow:
-    label: Create todo items
+    label: Delete a todo item
     commands:
-      - tapOn: "Add"
+      - evalScript:
+          script: ${0}
+          label: "[warning] Deleting a todo item is permanent. There is no undo."
+      - tapOn:
+          text: Delete
+          label: Tap **Delete** next to the item you want to remove.
+      - assertNotVisible: "Buy milk"
       - runFlow:
           when:
             true: ${TEST2DOC == 'true'}
           commands:
-            - takeScreenshot: created
+            - takeScreenshot: deleted
 ```
 
-Each flow becomes `test2doc-<flow-name>.mdx`, named from the flow's `name:`.
-Screenshots are copied next to it as `test2doc-<hash>.png`. Old `test2doc-*`
-files in the output directory are removed first, but only after every flow
-parsed, so a failed run keeps the existing docs.
+Use literal labels. Maestro only resolves `${variables}` in some labels
+(`tapOn` does, `inputText`, `pressKey` and `evalScript` do not).
+
+Each flow becomes `test2doc-<flow-name>.mdx`. Screenshots are copied next to it
+as `test2doc-<hash>.png`. Old `test2doc-*` files in the output directory are
+removed first, but only after every flow parsed, so a failed run keeps the
+existing docs.
 
 ## Limitations
 

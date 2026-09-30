@@ -58,10 +58,9 @@ export const generateDocs = ({
       const flow = parseFlow(entries)
       const outputNames: Record<string, string> = {}
       const shots = new Map<string, Buffer>()
-      const paths = [
-        flow.screenshots,
-        ...flow.steps.map((s) => s.screenshots),
-      ].flat()
+      const paths = [flow.blocks, ...flow.sections.map((s) => s.blocks)]
+        .flat()
+        .flatMap((block) => (block.type === "screenshot" ? [block.path] : []))
 
       for (const path of paths) {
         const buffer = readFileSync(join(flowDir, path))

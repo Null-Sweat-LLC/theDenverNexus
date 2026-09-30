@@ -1,5 +1,5 @@
 url: http://localhost:8081
-name: Todo CRUD
+name: Manage your todo list
 tags:
   - web
   - test2doc

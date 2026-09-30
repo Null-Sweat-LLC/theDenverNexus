@@ -1,0 +1,9 @@
+/* Generated screenshots are phone-sized, so keep them from filling the column */
+.markdown img {
+  display: block;
+  max-width: 280px !important;
+  height: auto;
+  margin: 1rem 0;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 12px;
+}
