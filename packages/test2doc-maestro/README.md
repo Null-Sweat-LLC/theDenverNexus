@@ -5,12 +5,84 @@ Generate Docusaurus docs from [Maestro](https://maestro.dev) flow runs.
 Maestro has no reporter API, so this is a CLI that reads the artifacts of a
 finished run (`--test-output-dir`) and writes the docs.
 
+## Installation
+
+You need:
+
+- **Node 18 or newer**, to run the CLI.
+- **Maestro**, which needs Java 17 or newer:
+
+  ```bash
+  curl -fsSL "https://get.maestro.mobile.dev" | bash
+  ```
+
+  Windows and the rest of the details are in
+  [Maestro's install docs](https://docs.maestro.dev/maestro-cli/how-to-install-maestro-cli).
+- **Something to run your app on** for each platform you want documented: an
+  Android emulator, an iOS simulator, or a browser.
+
+Then add the package to your project:
+
+```bash
+npm install --save-dev @test2doc/maestro
+```
+
+It provides the `test2doc-maestro` command, which you can run with
+`npx test2doc-maestro` or from a package script.
+
+Nothing in the package depends on how your app is built. It only reads what
+Maestro writes out, so it works with anything Maestro can drive, not just React
+Native.
+
+## Setup
+
+Add a small helper flow that takes a screenshot only when `TEST2DOC` is set, so
+regular test runs skip the screenshots. Put it next to your flows, for example
+as `.maestro/_shared/screenshot.yaml` (Maestro runs only the flows at the top
+level of `.maestro`, so a subfolder keeps helpers out of the test run):
+
+```yaml
+appId: com.example.app
+---
+- runFlow:
+    when:
+      true: ${TEST2DOC == 'true'}
+    commands:
+      - takeScreenshot: ${NAME}
+```
+
+Call it from your flows wherever you want a picture, passing a `NAME`:
+
+```yaml
+- runFlow:
+    file: _shared/screenshot.yaml
+    env:
+      NAME: add-before
+```
+
+The rest of setup is labeling your flows, described in
+[Writing flows for docs](#writing-flows-for-docs).
+
 ## Usage
 
 ```bash
 maestro test -e TEST2DOC=true --test-output-dir maestro-output .maestro
 test2doc-maestro --input maestro-output --output docs
 ```
+
+Point `--output` at your Docusaurus `docs` folder and the pages appear in your
+site. To run both steps with one command, add a script to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "docs:generate": "rm -rf maestro-output && maestro test -e TEST2DOC=true --test-output-dir maestro-output .maestro && test2doc-maestro -i maestro-output -o docs"
+  }
+}
+```
+
+Clearing `maestro-output` first keeps flows you have since deleted from
+lingering in the docs.
 
 | Option | Description |
 | --- | --- |
