@@ -48,7 +48,8 @@
     "lint": "biome lint src",
     "e2e:native": "maestro test --include-tags=native .maestro",
     "e2e:web": "maestro test --include-tags=web .maestro",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "e2e:docs": "rm -rf maestro-output && maestro test -e TEST2DOC=true --include-tags=native --test-output-dir maestro-output .maestro"
   },
   "private": true
 }
