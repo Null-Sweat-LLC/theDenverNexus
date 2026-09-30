@@ -3,7 +3,7 @@ import type { Block, Flow } from "./types.js"
 /**
  * Renders a flow as a how-to guide in markdown: an h1 for the flow, an h2 per
  * section, numbered instructions with their screenshots nested under them,
- * and Docusaurus admonitions for callouts.
+ * and markdown blocks written out as they are.
  * `outputNames` maps a screenshot's path in the run output to its file name.
  */
 export const renderMarkdown = (
@@ -21,11 +21,8 @@ export const renderMarkdown = (
         case "instruction":
           markdown += `${++step}. ${block.text}\n\n`
           break
-        case "text":
+        case "markdown":
           markdown += `${block.text}\n\n`
-          break
-        case "callout":
-          markdown += `:::${block.kind}\n${block.text}\n:::\n\n`
           break
         case "screenshot": {
           const file = outputNames[block.path]

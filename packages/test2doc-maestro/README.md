@@ -25,15 +25,15 @@ flow's `name:` is the page title.
 | In the flow | In the docs |
 | --- | --- |
 | `runFlow` with a `label:` | A section heading (`##`) |
+| `evalScript` with a `label:` | The label, written out as markdown |
 | Any other command with a `label:` | A numbered step |
-| A label starting with `[text]` | A paragraph |
-| A label starting with `[note]`, `[tip]`, `[info]`, `[warning]` or `[danger]` | A Docusaurus admonition |
 | `takeScreenshot` | An image. After a step it is nested under that step. |
 
 Commands without a label are ignored, so assertions and setup stay out of the
-docs. Labels only carry text, so put a callout or paragraph on a no-op command
-such as `evalScript`. Keep screenshots behind `TEST2DOC` so regular test runs
-skip them.
+docs. Maestro has no text-only command, so put markdown on a no-op `evalScript`.
+Paragraphs, lists and Docusaurus admonitions (`:::tip`, `:::warning`) all work,
+because the label is just markdown. Keep screenshots behind `TEST2DOC` so
+regular test runs skip them.
 
 ```yaml
 name: Manage your todo list
@@ -43,7 +43,10 @@ name: Manage your todo list
     commands:
       - evalScript:
           script: ${0}
-          label: "[warning] Deleting a todo item is permanent. There is no undo."
+          label: |
+            :::warning
+            Deleting a todo item is permanent. There is no undo.
+            :::
       - tapOn:
           text: Delete
           label: Tap **Delete** next to the item you want to remove.

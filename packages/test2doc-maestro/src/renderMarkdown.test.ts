@@ -80,7 +80,7 @@ describe("renderMarkdown", () => {
     const md = renderMarkdown(
       "Guide",
       flowOf("Mark it done", [
-        { type: "text", text: "It is checked now." },
+        { type: "markdown", text: "It is checked now." },
         { type: "screenshot", path: "takeScreenshot/a.png" },
       ]),
       names,
@@ -91,28 +91,28 @@ describe("renderMarkdown", () => {
     )
   })
 
-  it("renders text as a paragraph", () => {
+  it("writes markdown blocks as they are", () => {
     const md = renderMarkdown(
       "Guide",
-      flowOf("Add", [{ type: "text", text: "Your list starts empty." }]),
+      flowOf("Add", [{ type: "markdown", text: "Your list starts empty." }]),
       {},
     )
 
     expect(md).toContain("## Add\n\nYour list starts empty.\n\n")
   })
 
-  it.each(["note", "tip", "info", "warning", "danger"] as const)(
-    "renders a %s callout as a Docusaurus admonition",
-    (kind) => {
-      const md = renderMarkdown(
-        "Guide",
-        flowOf("Delete", [{ type: "callout", kind, text: "Heads up." }]),
-        {},
-      )
+  it("passes admonitions and other markdown through untouched", () => {
+    const md = renderMarkdown(
+      "Guide",
+      flowOf("Delete", [
+        { type: "markdown", text: ":::warning\nNo undo.\n:::" },
+        { type: "markdown", text: "- one\n- two" },
+      ]),
+      {},
+    )
 
-      expect(md).toContain(`:::${kind}\nHeads up.\n:::\n\n`)
-    },
-  )
+    expect(md).toContain(":::warning\nNo undo.\n:::\n\n- one\n- two\n\n")
+  })
 
   it("renders blocks that come before the first section, using the flow name as alt text", () => {
     const md = renderMarkdown(

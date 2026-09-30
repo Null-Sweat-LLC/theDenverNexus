@@ -1,4 +1,4 @@
-import type { CalloutKind, CommandEntry } from "../types.js"
+import type { CommandEntry } from "../types.js"
 
 type Options = {
   depth?: number
@@ -42,11 +42,8 @@ export const section = (label: string, depth = 1) =>
 export const instruction = (label: string, depth = 2) =>
   entry("tapOnElement", { depth, label })
 
-export const callout = (kind: CalloutKind, text: string, depth = 2) =>
-  entry("evalScriptCommand", { depth, label: `[${kind}] ${text}` })
-
-export const text = (label: string, depth = 2) =>
-  entry("evalScriptCommand", { depth, label: `[text] ${label}` })
+export const markdown = (label: string, depth = 2) =>
+  entry("evalScriptCommand", { depth, label })
 
 export const screenshot = (name: string, depth = 4) =>
   entry("takeScreenshotCommand", {

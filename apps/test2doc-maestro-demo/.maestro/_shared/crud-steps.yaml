@@ -1,9 +1,9 @@
 appId: com.test2doc.maestrodemo
 ---
-# Labels become the docs. A labeled runFlow is a section, any other labeled
-# command is a numbered step, and a label starting with [text], [note], [tip],
-# [info], [warning] or [danger] becomes a paragraph or callout. Use literal
-# labels: Maestro does not resolve variables in most of them.
+# Labels become the docs. A labeled runFlow is a section and any other labeled
+# command is a numbered step. The label on an evalScript is written to the page
+# as markdown, so it can be a paragraph or a :::tip / :::warning box. Use
+# literal labels: Maestro does not resolve variables in most of them.
 - runFlow: wait-for-app.yaml
 
 - runFlow:
@@ -11,7 +11,7 @@ appId: com.test2doc.maestrodemo
     commands:
       - evalScript:
           script: ${0}
-          label: "[text] Open the app. Your todo list starts out empty."
+          label: "Open the app. Your todo list starts out empty."
       - runFlow:
           file: screenshot.yaml
           env:
@@ -32,14 +32,17 @@ appId: com.test2doc.maestrodemo
       - assertVisible: "☐ Buy milk"
       - evalScript:
           script: ${0}
-          label: "[text] Your new item appears in the list with an empty checkbox (☐)."
+          label: "Your new item appears in the list with an empty checkbox (☐)."
       - runFlow:
           file: screenshot.yaml
           env:
             NAME: created
       - evalScript:
           script: ${0}
-          label: "[tip] Repeat these steps to add as many items as you like."
+          label: |
+            :::tip
+            Repeat these steps to add as many items as you like.
+            :::
       - runFlow:
           file: add-todo.yaml
           env:
@@ -56,7 +59,7 @@ appId: com.test2doc.maestrodemo
       - assertNotVisible: "☐ Buy milk"
       - evalScript:
           script: ${0}
-          label: "[text] The checkbox is now checked (☑)."
+          label: "The checkbox is now checked (☑)."
       - runFlow:
           file: screenshot.yaml
           env:
@@ -72,7 +75,7 @@ appId: com.test2doc.maestrodemo
       - assertNotVisible: "☑ Buy milk"
       - evalScript:
           script: ${0}
-          label: "[text] The checkbox is empty again and the item is back on your list."
+          label: "The checkbox is empty again and the item is back on your list."
       - runFlow:
           file: screenshot.yaml
           env:
@@ -83,7 +86,10 @@ appId: com.test2doc.maestrodemo
     commands:
       - evalScript:
           script: ${0}
-          label: "[warning] Deleting a todo item is permanent. There is no undo."
+          label: |
+            :::warning
+            Deleting a todo item is permanent. There is no undo.
+            :::
       - tapOn:
           text: Delete
           rightOf: "☐ Buy milk"
@@ -92,7 +98,7 @@ appId: com.test2doc.maestrodemo
       - assertVisible: "☐ Walk the dog"
       - evalScript:
           script: ${0}
-          label: "[text] The item is removed and the rest of your list stays as it was."
+          label: "The item is removed and the rest of your list stays as it was."
       - runFlow:
           file: screenshot.yaml
           env:

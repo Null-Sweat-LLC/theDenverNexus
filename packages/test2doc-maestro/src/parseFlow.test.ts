@@ -1,14 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest"
-import { CALLOUT_KINDS } from "./types.js"
 import { parseFlow } from "./parseFlow.js"
 import {
-  callout,
   entry,
   instruction,
+  markdown,
   resetSequence,
   screenshot,
   section,
-  text,
 } from "./testUtils/commands.js"
 
 describe("parseFlow", () => {
@@ -86,57 +84,52 @@ describe("parseFlow", () => {
     ])
   })
 
-  it.each(CALLOUT_KINDS)("turns a [%s] label into a callout", (kind) => {
-    const flow = parseFlow([section("Step"), callout(kind, "Be careful")])
-
-    expect(flow.sections[0]?.blocks).toEqual([
-      { type: "callout", kind, text: "Be careful" },
-    ])
-  })
-
-  it("reads callout prefixes regardless of case", () => {
+  it("turns a labeled evalScript into a markdown block, verbatim", () => {
     const flow = parseFlow([
       section("Step"),
-      entry("evalScriptCommand", { depth: 2, label: "[WARNING] Loud" }),
+      markdown(":::tip\nRepeat as often as you like.\n:::\n"),
     ])
 
     expect(flow.sections[0]?.blocks).toEqual([
-      { type: "callout", kind: "warning", text: "Loud" },
+      { type: "markdown", text: ":::tip\nRepeat as often as you like.\n:::" },
     ])
   })
 
-  it("turns a [text] label into a paragraph", () => {
-    const flow = parseFlow([section("Step"), text("Some explanation.")])
-
-    expect(flow.sections[0]?.blocks).toEqual([
-      { type: "text", text: "Some explanation." },
-    ])
-  })
-
-  it("keeps an unknown bracket prefix as part of an instruction", () => {
+  it("does not treat a bracket prefix specially", () => {
     const flow = parseFlow([
       section("Step"),
+      markdown("[warning] Loud"),
       entry("tapOnElement", { depth: 2, label: "[beta] Tap it" }),
     ])
 
     expect(flow.sections[0]?.blocks).toEqual([
+      { type: "markdown", text: "[warning] Loud" },
       { type: "instruction", text: "[beta] Tap it" },
     ])
   })
 
-  it("keeps instructions, text, callouts and screenshots in sequence", () => {
+  it("ignores an evalScript that has no label", () => {
+    const flow = parseFlow([
+      section("Step"),
+      entry("evalScriptCommand", { depth: 2 }),
+    ])
+
+    expect(flow.sections[0]?.blocks).toEqual([])
+  })
+
+  it("keeps instructions, markdown and screenshots in sequence", () => {
     const flow = parseFlow([
       section("Delete a todo item"),
-      callout("warning", "This cannot be undone."),
+      markdown(":::warning\nThis cannot be undone.\n:::"),
       instruction("Tap Delete"),
-      text("The item is gone."),
+      markdown("The item is gone."),
       screenshot("deleted"),
     ])
 
     expect(flow.sections[0]?.blocks).toEqual([
-      { type: "callout", kind: "warning", text: "This cannot be undone." },
+      { type: "markdown", text: ":::warning\nThis cannot be undone.\n:::" },
       { type: "instruction", text: "Tap Delete" },
-      { type: "text", text: "The item is gone." },
+      { type: "markdown", text: "The item is gone." },
       { type: "screenshot", path: "takeScreenshot/deleted.png" },
     ])
   })

@@ -9,19 +9,9 @@ export interface CommandEntry {
   }
 }
 
-export const CALLOUT_KINDS = [
-  "note",
-  "tip",
-  "info",
-  "warning",
-  "danger",
-] as const
-export type CalloutKind = (typeof CALLOUT_KINDS)[number]
-
 export type Block =
   | { type: "instruction"; text: string }
-  | { type: "text"; text: string }
-  | { type: "callout"; kind: CalloutKind; text: string }
+  | { type: "markdown"; text: string }
   | { type: "screenshot"; path: string }
 
 export interface Section {

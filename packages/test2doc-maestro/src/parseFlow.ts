@@ -1,5 +1,4 @@
 import type { Block, CommandEntry, Flow, Section } from "./types.js"
-import { CALLOUT_KINDS, type CalloutKind } from "./types.js"
 
 const commandName = (entry: CommandEntry) => Object.keys(entry.command)[0] ?? ""
 
@@ -7,25 +6,12 @@ const commandName = (entry: CommandEntry) => Object.keys(entry.command)[0] ?? ""
 const labelOf = (entry: CommandEntry, name: string) =>
   entry.metadata.evaluatedCommand?.[name]?.label ?? entry.command[name]?.label
 
-const PREFIXED_LABEL = /^\[(\w+)\]\s*(.*)$/s
-
-const blockFromLabel = (label: string): Block => {
-  const [, prefix = "", rest = ""] = label.match(PREFIXED_LABEL) ?? []
-  const kind = prefix.toLowerCase()
-
-  if (kind === "text") return { type: "text", text: rest }
-  if ((CALLOUT_KINDS as readonly string[]).includes(kind)) {
-    return { type: "callout", kind: kind as CalloutKind, text: rest }
-  }
-  return { type: "instruction", text: label }
-}
-
 /**
  * Turns the commands Maestro recorded for one flow into a guide.
- * A labeled `runFlow` starts a section. Any other labeled command becomes an
- * instruction, or a callout or paragraph when its label starts with a
- * `[note]`-style prefix. Completed screenshots are added in sequence.
- * Blocks go to the nearest section above them.
+ * A labeled `runFlow` starts a section. A labeled `evalScript` is a markdown
+ * block, written to the page as is. Any other labeled command is an
+ * instruction. Completed screenshots are added in sequence, and every block
+ * goes to the nearest section above it.
  */
 export const parseFlow = (entries: CommandEntry[]): Flow => {
   const ordered = [...entries].sort(
@@ -69,7 +55,12 @@ export const parseFlow = (entries: CommandEntry[]): Flow => {
       continue
     }
 
-    add(blockFromLabel(label), depth)
+    add(
+      name === "evalScriptCommand"
+        ? { type: "markdown", text: label.trim() }
+        : { type: "instruction", text: label },
+      depth,
+    )
   }
 
   return flow
