@@ -6,7 +6,7 @@ export interface CliIo {
   stderr: (text: string) => void
 }
 
-const USAGE = `Usage: test2doc-maestro --input <dir> [--output <dir>]
+const USAGE = `Usage: test2doc-maestro --input [platform=]<dir> [--output <dir>]
 
 Generate Docusaurus docs from a Maestro run.
 
@@ -16,19 +16,32 @@ flows take their doc screenshots:
   maestro test -e TEST2DOC=true --test-output-dir maestro-output .maestro
   test2doc-maestro --input maestro-output --output docs
 
+To document several platforms on one page, run the same flow on each and give
+one labeled input per platform. Screenshots become tabs:
+
+  test2doc-maestro -i android=output/android -i web=output/web -o docs
+
 Options:
-  -i, --input <dir>    Directory passed to \`maestro test --test-output-dir\` (required)
-  -o, --output <dir>   Where to write the docs (default: ./docs)
-  -h, --help           Show this help
+  -i, --input <[platform=]dir>  Directory passed to \`maestro test --test-output-dir\`.
+                                Repeat it, with a platform for each, for several platforms. (required)
+  -o, --output <dir>            Where to write the docs (default: ./docs)
+  -h, --help                    Show this help
 `
 
+const LABELED_INPUT = /^([A-Za-z][\w-]*)=(.+)$/s
+
+const parseInput = (value: string) => {
+  const [, platform, dir] = value.match(LABELED_INPUT) ?? []
+  return platform && dir ? { platform, dir } : { dir: value }
+}
+
 export const run = (argv: string[], io: CliIo): number => {
-  let values: { input?: string; output?: string; help?: boolean }
+  let values: { input?: string[]; output?: string; help?: boolean }
   try {
     values = parseArgs({
       args: argv,
       options: {
-        input: { type: "string", short: "i" },
+        input: { type: "string", short: "i", multiple: true },
         output: { type: "string", short: "o" },
         help: { type: "boolean", short: "h" },
       },
@@ -43,14 +56,14 @@ export const run = (argv: string[], io: CliIo): number => {
     return 0
   }
 
-  if (!values.input) {
+  if (!values.input || values.input.length === 0) {
     io.stderr(`Missing required option --input\n\n${USAGE}`)
     return 1
   }
 
   try {
     const { pages, screenshots } = generateDocs({
-      inputDir: values.input,
+      inputs: values.input.map(parseInput),
       outputDir: values.output ?? "./docs",
     })
     io.stdout(

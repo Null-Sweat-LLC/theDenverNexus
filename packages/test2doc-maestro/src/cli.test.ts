@@ -87,4 +87,30 @@ describe("cli", () => {
     expect(run(["--nope"], io)).toBe(1)
     expect(err.join("")).toContain("--nope")
   })
+
+  it("takes one labeled --input per platform and renders tabs", () => {
+    const { io } = capture()
+    const webDir = mkdtempSync(join(tmpdir(), "t2d-cli-web-"))
+    const flowDir = join(webDir, "run", "Todo CRUD")
+    mkdirSync(flowDir, { recursive: true })
+    writeFileSync(
+      join(flowDir, "commands.json"),
+      JSON.stringify([section("Step")]),
+    )
+
+    const code = run(
+      ["-i", `android=${inputDir}`, "-i", `web=${webDir}`, "-o", outputDir],
+      io,
+    )
+
+    expect(code).toBe(0)
+    expect(readdirSync(outputDir)).toEqual(["test2doc-todo-crud.mdx"])
+  })
+
+  it("exits 1 when several inputs are given without platforms", () => {
+    const { io, err } = capture()
+
+    expect(run(["-i", inputDir, "-i", inputDir, "-o", outputDir], io)).toBe(1)
+    expect(err.join("")).toMatch(/platform/)
+  })
 })

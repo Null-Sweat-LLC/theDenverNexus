@@ -24,3 +24,23 @@ export interface Flow {
   blocks: Block[]
   sections: Section[]
 }
+
+export interface Image {
+  platform?: string
+  file: string
+}
+
+export type GuideBlock =
+  | Exclude<Block, { type: "screenshot" }>
+  | { type: "screenshot"; images: Image[] }
+
+export interface GuideSection {
+  title: string
+  blocks: GuideBlock[]
+}
+
+/** A flow ready to render, with its screenshots resolved to output files */
+export interface Guide {
+  blocks: GuideBlock[]
+  sections: GuideSection[]
+}

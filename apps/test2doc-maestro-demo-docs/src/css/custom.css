@@ -1,8 +1,12 @@
-/* Generated screenshots are phone-sized, so keep them from filling the column */
+/* Screenshots are phone-sized on Android and desktop-sized on web. Cap the
+   height so a tall phone shot does not fill the page, but let a wide web shot
+   use the column. */
 .markdown img {
   display: block;
-  max-width: 280px !important;
+  width: auto !important;
   height: auto;
+  max-width: 100% !important;
+  max-height: 520px;
   margin: 1rem 0;
   border: 1px solid var(--ifm-color-emphasis-300);
   border-radius: 12px;

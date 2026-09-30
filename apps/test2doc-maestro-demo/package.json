@@ -49,7 +49,9 @@
     "e2e:native": "maestro test --include-tags=native .maestro",
     "e2e:web": "maestro test --include-tags=web .maestro",
     "typecheck": "tsc --noEmit",
-    "e2e:docs": "rm -rf maestro-output && maestro test -e TEST2DOC=true --include-tags=native --test-output-dir maestro-output .maestro"
+    "e2e:docs": "rm -rf maestro-output && pnpm e2e:docs:native && pnpm e2e:docs:web",
+    "e2e:docs:native": "maestro test -e TEST2DOC=true --include-tags=native --test-output-dir maestro-output/android .maestro",
+    "e2e:docs:web": "maestro test -e TEST2DOC=true --include-tags=web --test-output-dir maestro-output/web .maestro"
   },
   "private": true
 }

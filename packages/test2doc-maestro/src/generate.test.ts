@@ -23,12 +23,13 @@ const writeFlow = (
   name: string,
   entries: unknown[],
   shots: string[] = [],
+  bytes: Buffer = PNG,
 ) => {
   const flowDir = join(inputDir, "2026-09-30_100000", name)
   mkdirSync(join(flowDir, "takeScreenshot"), { recursive: true })
   writeFileSync(join(flowDir, "commands.json"), JSON.stringify(entries))
   for (const shot of shots) {
-    writeFileSync(join(flowDir, "takeScreenshot", `${shot}.png`), PNG)
+    writeFileSync(join(flowDir, "takeScreenshot", `${shot}.png`), bytes)
   }
 }
 
@@ -45,7 +46,7 @@ describe("generateDocs", () => {
   it("writes one mdx page per flow, named after the flow", () => {
     writeFlow(inputDir, "Todo CRUD", [section("Create todo items")])
 
-    generateDocs({ inputDir, outputDir })
+    generateDocs({ inputs: [{ dir: inputDir }], outputDir })
 
     expect(readdirSync(outputDir)).toEqual(["test2doc-todo-crud.mdx"])
     expect(
@@ -61,7 +62,7 @@ describe("generateDocs", () => {
       ["created"],
     )
 
-    generateDocs({ inputDir, outputDir })
+    generateDocs({ inputs: [{ dir: inputDir }], outputDir })
 
     const png = readdirSync(outputDir).find((f) => f.endsWith(".png"))
     expect(png).toMatch(/^test2doc-[0-9a-f]{12}\.png$/)
@@ -76,7 +77,7 @@ describe("generateDocs", () => {
     writeFileSync(join(outputDir, "intro.md"), "keep me")
     writeFlow(inputDir, "Todo CRUD", [section("Step")])
 
-    generateDocs({ inputDir, outputDir })
+    generateDocs({ inputs: [{ dir: inputDir }], outputDir })
 
     expect(readdirSync(outputDir).sort()).toEqual([
       "intro.md",
@@ -88,7 +89,7 @@ describe("generateDocs", () => {
     const nested = join(outputDir, "docs", "mobile")
     writeFlow(inputDir, "Todo CRUD", [section("Step")])
 
-    generateDocs({ inputDir, outputDir: nested })
+    generateDocs({ inputs: [{ dir: inputDir }], outputDir: nested })
 
     expect(readdirSync(nested)).toEqual(["test2doc-todo-crud.mdx"])
   })
@@ -98,21 +99,130 @@ describe("generateDocs", () => {
       entry("tapOnElement", { status: "FAILED" }),
     ])
 
-    expect(() => generateDocs({ inputDir, outputDir })).toThrow(/Todo CRUD/)
+    expect(() =>
+      generateDocs({ inputs: [{ dir: inputDir }], outputDir }),
+    ).toThrow(/Todo CRUD/)
   })
 
   it("fails when the input directory has no flow output", () => {
-    expect(() => generateDocs({ inputDir, outputDir })).toThrow(
-      /commands\.json/,
-    )
+    expect(() =>
+      generateDocs({ inputs: [{ dir: inputDir }], outputDir }),
+    ).toThrow(/commands\.json/)
   })
 
   it("returns how many pages and screenshots it wrote", () => {
     writeFlow(inputDir, "Todo CRUD", [section("Step"), screenshot("a")], ["a"])
 
-    expect(generateDocs({ inputDir, outputDir })).toEqual({
+    expect(generateDocs({ inputs: [{ dir: inputDir }], outputDir })).toEqual({
       pages: 1,
       screenshots: 1,
+    })
+  })
+
+  describe("with one input per platform", () => {
+    const setup = () => {
+      const androidDir = mkdtempSync(join(tmpdir(), "t2d-android-"))
+      const webDir = mkdtempSync(join(tmpdir(), "t2d-web-"))
+      const steps = () => [section("Create todo items"), screenshot("created")]
+      writeFlow(
+        androidDir,
+        "Todo CRUD",
+        steps(),
+        ["created"],
+        Buffer.from("android-png"),
+      )
+      resetSequence()
+      writeFlow(
+        webDir,
+        "Todo CRUD",
+        steps(),
+        ["created"],
+        Buffer.from("web-png"),
+      )
+      return { androidDir, webDir }
+    }
+
+    it("writes one page per flow, with a tab for each platform's screenshot", () => {
+      const { androidDir, webDir } = setup()
+
+      const result = generateDocs({
+        inputs: [
+          { platform: "android", dir: androidDir },
+          { platform: "web", dir: webDir },
+        ],
+        outputDir,
+      })
+
+      const page = readFileSync(
+        join(outputDir, "test2doc-todo-crud.mdx"),
+        "utf8",
+      )
+      expect(
+        readdirSync(outputDir).filter((f) => f.endsWith(".mdx")),
+      ).toHaveLength(1)
+      expect(page).toContain('<TabItem value="android" label="Android">')
+      expect(page).toContain('<TabItem value="web" label="Web">')
+      expect(result).toEqual({ pages: 1, screenshots: 2 })
+    })
+
+    it("fails when the platforms' flows differ", () => {
+      const { androidDir, webDir } = setup()
+      writeFlow(webDir, "Todo CRUD", [section("A different step")])
+
+      expect(() =>
+        generateDocs({
+          inputs: [
+            { platform: "android", dir: androidDir },
+            { platform: "web", dir: webDir },
+          ],
+          outputDir,
+        }),
+      ).toThrow(/Todo CRUD/)
+    })
+
+    it("fails when several inputs are not all labeled with a platform", () => {
+      const { androidDir, webDir } = setup()
+
+      expect(() =>
+        generateDocs({
+          inputs: [{ platform: "android", dir: androidDir }, { dir: webDir }],
+          outputDir,
+        }),
+      ).toThrow(/platform/)
+    })
+
+    it("fails when two inputs share a platform", () => {
+      const { androidDir, webDir } = setup()
+
+      expect(() =>
+        generateDocs({
+          inputs: [
+            { platform: "web", dir: androidDir },
+            { platform: "web", dir: webDir },
+          ],
+          outputDir,
+        }),
+      ).toThrow(/web/)
+    })
+
+    it("keeps a flow that only one platform ran as a single-platform page", () => {
+      const androidDir = mkdtempSync(join(tmpdir(), "t2d-android-"))
+      const webDir = mkdtempSync(join(tmpdir(), "t2d-web-"))
+      writeFlow(androidDir, "Android only", [section("Step")])
+      writeFlow(webDir, "Web only", [section("Step")])
+
+      generateDocs({
+        inputs: [
+          { platform: "android", dir: androidDir },
+          { platform: "web", dir: webDir },
+        ],
+        outputDir,
+      })
+
+      expect(readdirSync(outputDir).sort()).toEqual([
+        "test2doc-android-only.mdx",
+        "test2doc-web-only.mdx",
+      ])
     })
   })
 })
