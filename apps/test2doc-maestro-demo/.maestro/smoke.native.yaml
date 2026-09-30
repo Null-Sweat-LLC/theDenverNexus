@@ -1,0 +1,4 @@
+appId: com.test2doc.maestrodemo
+---
+- launchApp
+- runFlow: _shared/smoke-steps.yaml
