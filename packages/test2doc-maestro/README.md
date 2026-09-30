@@ -199,3 +199,16 @@ names. If they differ, generation fails and says which platforms disagree.
 - No Docusaurus front matter or categories yet.
 - Screenshots are as Maestro took them. A phone status bar or a dev overlay
   (for example Expo's dev tools button on web) will show up in the docs.
+
+## Releases
+
+Releases are automatic: a push to `main` that changes the package's source runs
+the `Release - test2doc-maestro` workflow, which versions the release from the
+commit messages (`feat:` is a minor release, `fix:` and `perf:` are patches),
+updates `CHANGELOG.md`, publishes to npm and creates a GitHub release. Tags look
+like `test2doc-maestro-v0.1.0`.
+
+While the package is being tried out it stays on 0.x, so a breaking change
+(`feat!:` or a `BREAKING CHANGE:` footer) bumps the minor version instead of
+jumping to 1.0.0. To move to 1.0.0, remove the `"breaking": true` rule from
+`.releaserc.json`, and the next breaking change releases 1.0.0.
