@@ -91,7 +91,8 @@ appId: com.test2doc.maestrodemo
             Deleting a todo item is permanent. There is no undo.
             :::
       - tapOn:
-          text: Delete
+          # iOS exposes the button as "Delete Buy milk", Android and web as "Delete"
+          text: "Delete.*"
           rightOf: "☐ Buy milk"
           label: Tap **Delete** next to the item you want to remove.
       - assertNotVisible: "☐ Buy milk"
