@@ -1,0 +1,51 @@
+{
+  "name": "@test2doc/maestro",
+  "version": "0.0.0",
+  "description": "A CLI that generates docs from Maestro flow runs",
+  "keywords": [
+    "documentation",
+    "living documentation",
+    "markdown",
+    "docs",
+    "test",
+    "maestro",
+    "docusaurus",
+    "mobile",
+    "automation"
+  ],
+  "homepage": "https://test2doc.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Null-Sweat-LLC/theDenverNexus.git",
+    "directory": "packages/test2doc-maestro"
+  },
+  "license": "Apache-2.0",
+  "author": "@dethstrobe",
+  "type": "module",
+  "bin": {
+    "test2doc-maestro": "./bin/test2doc-maestro.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "build:watch": "tsc --project tsconfig.json --watch",
+    "clean": "rm -rf dist && rm -rf tsconfig.tsbuildinfo",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "test": "vitest run",
+    "unit": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  }
+}
