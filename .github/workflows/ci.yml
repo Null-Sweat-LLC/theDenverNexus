@@ -1,0 +1,200 @@
+name: CI
+# Runs every project's checks on every PR, so a dependency bump in one
+# workspace can't silently break another.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test2doc-playwright:
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.63.0-jammy
+    steps:
+      - name: Branch Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Node Setup
+        uses: actions/setup-node@v4
+        with:
+          cache: pnpm
+          node-version: "latest"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+
+      - name: Install Playwright Browsers
+        working-directory: packages/test2doc-playwright
+        run: pnpm playwright install --with-deps chromium
+
+      - name: Build Test2Doc
+        run: pnpm build:test2doc
+
+      - name: Run Tests
+        run: pnpm test:test2doc
+        env:
+          CI: true
+
+      - name: Upload Screenshot Diffs
+        if: failure()  # Only when tests fail
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-diffs-${{ github.run_number }}
+          path: packages/test2doc-playwright/tests/expected-screenshots/*-diff.png
+          retention-days: 30
+
+  playwright-passkey-gen:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Branch Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Node Setup
+        uses: actions/setup-node@v4
+        with:
+          cache: pnpm
+          node-version: "latest"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Tests
+        working-directory: packages/playwright-passkey-gen
+        run: pnpm ci:test
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-passkey-report-${{ github.run_number }}
+          path: packages/playwright-passkey-gen/playwright-report/
+          retention-days: 30
+
+  test2doc-maestro:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Branch Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Node Setup
+        uses: actions/setup-node@v4
+        with:
+          cache: pnpm
+          node-version: "latest"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Tests
+        run: pnpm test:maestro
+
+      - name: Build
+        working-directory: packages/test2doc-maestro
+        run: pnpm build
+
+  test2doc-maestro-demo:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/test2doc-maestro-demo
+    steps:
+      - name: Branch Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Node Setup
+        uses: actions/setup-node@v4
+        with:
+          cache: pnpm
+          node-version: "latest"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Offline compares against the versions pinned by the installed Expo SDK,
+      # so it fails on incompatible bumps but not on newly published patches.
+      - name: Check Expo SDK Compatibility
+        run: npx expo install --check
+        env:
+          CI: true
+          EXPO_OFFLINE: 1
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Export Web Build
+        run: npx expo export --platform web
+        env:
+          CI: true
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Branch Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Node Setup
+        uses: actions/setup-node@v4
+        with:
+          cache: pnpm
+          node-version: "latest"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build test2doc-maestro
+        working-directory: packages/test2doc-maestro
+        run: pnpm build
+
+      - name: Typecheck test2doc-docs
+        working-directory: apps/test2doc-docs
+        run: pnpm typecheck
+
+      - name: Build test2doc-docs
+        working-directory: apps/test2doc-docs
+        run: pnpm build
+
+      - name: Typecheck test2doc-maestro-demo-docs
+        working-directory: apps/test2doc-maestro-demo-docs
+        run: pnpm typecheck
+
+      - name: Build test2doc-maestro-demo-docs
+        working-directory: apps/test2doc-maestro-demo-docs
+        run: pnpm build
