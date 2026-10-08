@@ -254,7 +254,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-          cache: gradle
 
       - name: Install Maestro
         run: |
@@ -268,6 +267,10 @@ jobs:
         run: npx expo prebuild --platform android --no-install
         env:
           CI: true
+
+      # Set up after prebuild, since android/ is generated and not committed.
+      - name: Gradle Setup
+        uses: gradle/actions/setup-gradle@v4
 
       # Release bundles the JS into the APK, so no Metro server is needed.
       # The Expo template signs release builds with the debug keystore.
