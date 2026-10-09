@@ -529,6 +529,39 @@ This is injected markdown content 2
         screenshotBuffer,
       )
     })
+
+    it("should keep markdown and screenshots attached in the same millisecond the step ends in that step", () => {
+      const reporter = setup()
+
+      reporter.onBegin(mockFullConfig, mockSuiteForPages)
+      reporter.onStepBegin(mockTestSuccess, createMockTestResult(), mockStep)
+      reporter.onStepEnd(
+        mockTestSuccess,
+        createMockTestResult({
+          attachments: [
+            {
+              name: `test2doc-markdown-${Date.now()}-1.md`,
+              body: Buffer.from("Attached as the step ended"),
+              contentType: "text/markdown",
+            },
+            {
+              name: `test2doc-${Date.now()}-1.png`,
+              body: Buffer.from("mock image data"),
+              contentType: "image/png",
+            },
+          ],
+        }),
+        mockStep,
+      )
+      reporter.onTestEnd(mockTestSuccess, createMockTestResult())
+      reporter.onEnd()
+
+      expect(
+        readFileSync(`${tempDir}/test2doc-login-page.mdx`, "utf8"),
+      ).toContain(
+        "Given user is on login page\n\nAttached as the step ended\n\n![screenshot](./test2doc-15208f4337a8.png)\n",
+      )
+    })
   })
 
   describe("exit test run", () => {

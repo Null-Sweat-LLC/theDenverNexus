@@ -195,7 +195,7 @@ class Test2DocReporter implements Reporter {
         if (screenshotMatch) {
           const screenshotTime = +(screenshotMatch[1] ?? 0)
           if (
-            screenshotTime < now &&
+            screenshotTime <= now &&
             !this.seenScreenshot.has(attachment.name)
           ) {
             this.seenScreenshot.add(attachment.name)
@@ -205,7 +205,7 @@ class Test2DocReporter implements Reporter {
           }
         } else if (markdownMatch) {
           const markdownTime = +(markdownMatch[1] ?? 0)
-          if (markdownTime < now && !this.seenMarkdown.has(attachment.name)) {
+          if (markdownTime <= now && !this.seenMarkdown.has(attachment.name)) {
             this.seenMarkdown.add(attachment.name)
             docSection.steps.push({ markdown: attachment.body.toString() })
           }
