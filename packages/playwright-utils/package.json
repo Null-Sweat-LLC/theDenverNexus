@@ -1,0 +1,54 @@
+{
+  "name": "@test2doc/playwright-utils",
+  "version": "0.1.0",
+  "description": "Playwright helpers for hydration-safe interactions in server-rendered apps",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Null-Sweat-LLC/theDenverNexus.git",
+    "directory": "packages/playwright-utils"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "pretest": "pnpm playwright install --with-deps chromium",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "doc:gen": "TEST2DOC=true playwright test --config=playwright-test2doc.config.ts",
+    "ci:test": "pnpm build && pnpm test",
+    "build": "tsc --project tsconfig.json",
+    "build:watch": "tsc --project tsconfig.json --watch",
+    "typecheck": "tsc --project tsconfig.test.json",
+    "clean": "rm -rf dist && rm -rf tsconfig.tsbuildinfo",
+    "format": "biome format --write .",
+    "lint": "biome lint . --fix"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "playwright",
+    "testing",
+    "hydration",
+    "react"
+  ],
+  "author": "Null Sweat, LLC",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.17.1",
+  "peerDependencies": {
+    "@playwright/test": "^1.40.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@test2doc/playwright": "workspace:*",
+    "@types/node": "^26.6.3",
+    "typescript": "^7.0.2"
+  }
+}

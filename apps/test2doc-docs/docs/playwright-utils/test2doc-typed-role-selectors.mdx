@@ -1,0 +1,32 @@
+---
+title: Typed role selectors
+sidebar_position: 4
+description: Keep getByRole selectors in one typed map with the RoleSelector type.
+---
+
+# Typed role selectors
+
+## RoleSelector
+
+Use `RoleSelector` to keep selectors in one typed map.
+
+
+`RoleSelector` is shorthand for `Parameters<Page["getByRole"]>`, the type behind the selector tuple pattern. Selector tuples work on their own or alongside page objects, as the selectors a page object uses. For more on the pattern, see [Selector Tuple: An alternative to Page Object Model](/blog/selector-tuple-vs-page-object-model).
+
+
+```ts
+import type { RoleSelector } from "@test2doc/playwright-utils"
+
+export const selectors = {
+  buttonSave: ["button", { name: "Save" }],
+} satisfies Record<string, RoleSelector>
+```
+
+Spread an entry into `getByRole`.
+
+
+```ts
+await page.getByRole(...selectors.buttonSave).click()
+```
+
+

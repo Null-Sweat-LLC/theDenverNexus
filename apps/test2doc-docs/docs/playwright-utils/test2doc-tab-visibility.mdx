@@ -1,0 +1,44 @@
+---
+title: Tab visibility
+sidebar_position: 3
+description: Test how your app behaves when the user switches to another tab and comes back.
+---
+
+# Tab visibility
+
+## Why you need it
+
+Apps often react when the user switches to another tab and comes back.
+
+
+Polling pauses while the tab is hidden, a live connection closes and reconnects, or data refetches when the user returns (like React Query's `refetchOnWindowFocus`). The browser tells the page through `document.visibilityState` and the `visibilitychange` event.
+
+Visibility is not the same as focus. The tab is hidden when the user switches to another tab or minimizes the window. Clicking into another app while the window is still on screen only fires `blur`, and the page stays `visible`.
+
+Playwright can't hide a tab for real.
+
+
+Every page stays `visible`, even when you open a second page and bring it to the front. So `visibilitychange` never fires on its own, and `setTabVisibility` fakes it for you. It's separate from the hydration helpers like `clickUntil` and `interactUntil`, which deal with timing, not visibility.
+
+
+## setTabVisibility
+
+Render a page that reacts to `visibilitychange`, the way code that pauses, reconnects or refetches does.
+
+`setTabVisibility(page, "hidden")` overrides `document.visibilityState` and dispatches `visibilitychange`.
+
+
+```ts
+import { setTabVisibility } from "@test2doc/playwright-utils"
+
+await setTabVisibility(page, "hidden")
+```
+
+`setTabVisibility(page, "visible")` brings the tab back.
+
+
+```ts
+await setTabVisibility(page, "visible")
+```
+
+

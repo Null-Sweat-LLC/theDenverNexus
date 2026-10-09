@@ -1,0 +1,144 @@
+---
+title: Hydration-safe interactions
+sidebar_position: 2
+description: Click, fill and select reliably in server-rendered React apps, even before hydration finishes.
+---
+
+# Hydration-safe interactions
+
+## The problem
+
+### A click before hydration does nothing
+
+A server-rendered button is visible and clickable before React hydrates and attaches its `onClick`.
+
+Playwright counts a click on it as a success, even though nothing happened.
+
+Waiting for `networkidle` doesn't fix it.
+
+
+It hides the problem most of the time but still flakes, because an idle network says nothing about whether hydration has finished.
+
+If the page long-polls, `networkidle` never arrives at all: the poll request stays open, so the wait runs until it times out.
+
+
+Retrying until the result appears is the only check that tells you the handler is attached. The helpers below do that retrying for you.
+
+Each helper waits for an assertion on what the interaction changed, such as a dialog opening or a status message updating. That's also good accessibility practice: every action should give the user feedback they can perceive, so they know it worked. If a click changes nothing a user can see or a screen reader can announce (see [WCAG 4.1.3 Status Messages](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html)), the user can't tell it worked, and neither can your test. Assert on that feedback, ideally with `getByRole`, and the test also checks that the feedback is there.
+
+
+## clickUntil
+
+### Retry a click until the result appears
+
+Render a button whose click handler is attached late.
+
+Pass `clickUntil` the button to click and the element the click should reveal.
+
+
+```ts
+import { clickUntil } from "@test2doc/playwright-utils"
+
+await clickUntil(
+  page.getByRole("button", { name: "Add shift" }),
+  page.getByRole("dialog", { name: "New shift" }),
+)
+```
+
+Clicks that are swallowed before hydration are retried, and retrying stops as soon as the dialog shows up.
+
+
+A click that worked never gets a second one, which matters for toggles: this button opened exactly one dialog.
+
+
+### Options
+
+`clickUntil` takes an optional third argument.
+
+
+- `timeout` (default `15000`): the total time allowed before the click counts as a real failure.
+- `settle` (default `2000`): how long each click gets to make the expected element appear before it counts as swallowed and is retried. Raise it for actions that are slow but must not happen twice, such as a form submit.
+
+When the timeout runs out, `clickUntil` throws.
+
+
+```ts
+await clickUntil(
+  page.getByRole("button", { name: "Dead" }),
+  page.getByRole("status").getByText("Never"),
+  { timeout: 500, settle: 100 },
+) // throws
+```
+
+Before each click, `clickUntil` hovers with `force: true`.
+
+
+A plain `hover()` waits for the element to stop moving, so buttons with a CSS hover transform (`translateY` on `:hover`) would send Playwright into an "element is not stable" retry loop.
+
+
+## interactUntil
+
+### Repeat any interaction until an assertion holds
+
+`interactUntil` is the general form of `clickUntil`, for interactions other than a single click.
+
+Pass it a function that interacts with the page and a function that asserts on the result. It runs both until the assertion passes or the timeout (default `15000`) runs out.
+
+
+```ts
+import { fillWithChange, interactUntil } from "@test2doc/playwright-utils"
+
+await interactUntil(
+  () => fillWithChange(page.getByLabel("Start time"), "09:00"),
+  () => expect(page.getByRole("status")).toHaveText("09:00"),
+)
+```
+
+The interaction may run several times, so it must be safe to repeat.
+
+
+## fillWithChange
+
+### Force onChange for a value filled before hydration
+
+React remembers the last value it saw in each input and skips `onChange` when an `input` event reports no change.
+
+If a fill before hydration already set the field to the value, filling the same value again never triggers `onChange`.
+
+`fillWithChange` clears the field first, which forces a real change on every attempt. Use it instead of a bare `fill()` inside `interactUntil`.
+
+
+```ts
+import { fillWithChange, interactUntil } from "@test2doc/playwright-utils"
+
+await interactUntil(
+  () => fillWithChange(page.getByRole("textbox", { name: "Name" }), "Ada"),
+  () => expect(page.getByRole("status")).toHaveText("Ada"),
+)
+```
+
+
+## selectWithChange
+
+### Force onChange for an option chosen before hydration
+
+`selectWithChange` is the `select` version of `fillWithChange`.
+
+Uncontrolled selects (an `onChange` but no `value`) have one more trap: if an option was chosen before hydration, the page keeps showing it while React's state never updates, and nothing on screen tells you.
+
+Choosing the same option again does nothing, so `selectWithChange` switches to the first option before choosing the one you asked for. It takes either `{ label }` or `{ value }`.
+
+
+```ts
+import { interactUntil, selectWithChange } from "@test2doc/playwright-utils"
+
+await interactUntil(
+  () =>
+    selectWithChange(page.getByRole("combobox", { name: "Location" }), {
+      label: "Annex",
+    }),
+  () => expect(page.getByRole("status")).toHaveText("annex"),
+)
+```
+
+
