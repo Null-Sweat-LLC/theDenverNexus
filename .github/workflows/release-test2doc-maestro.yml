@@ -54,4 +54,8 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
         working-directory: packages/test2doc-maestro
         run: |
+          # Other workflows, like the docs deploy, can push to main while this
+          # one runs, and semantic-release won't publish from a branch that is
+          # behind the remote.
+          git pull --ff-only origin main
           npx semantic-release
