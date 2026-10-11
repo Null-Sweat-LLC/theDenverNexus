@@ -71,6 +71,19 @@ pnpm test
 pnpm typecheck
 ```
 
+## Releases
+
+Releases are automatic: a push to `main` that changes the package's source runs
+the `Release - playwright-utils` workflow, which versions the release from the
+commit messages (`feat:` is a minor release, `fix:` and `perf:` are patches),
+updates `CHANGELOG.md`, publishes to npm and creates a GitHub release. Tags look
+like `playwright-utils-v0.1.0`.
+
+While the package is being tried out it stays on 0.x, so a breaking change
+(`feat!:` or a `BREAKING CHANGE:` footer) bumps the minor version instead of
+jumping to 1.0.0. To move to 1.0.0, remove the `"breaking": true` rule from
+`.releaserc.json`, and the next breaking change releases 1.0.0.
+
 ## License
 
 Apache-2.0
