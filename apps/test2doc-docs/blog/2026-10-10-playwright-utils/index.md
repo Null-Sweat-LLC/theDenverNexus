@@ -73,7 +73,7 @@ await interactUntil(
 
 That `fillWithChange` isn't decoration. React remembers the last value it saw in each input and skips `onChange` when nothing changed. So if a `fill()` before hydration already put "Ada" in the field, filling "Ada" again on the retry never fires `onChange`. Your retry loop keeps retrying until it times out. `fillWithChange` clears the field first, so every attempt is a real change.
 
-Selects are worse. With an uncontrolled `<select>`, an option chosen before hydration keeps showing on the page while React's state never updates, and nothing on screen tells you. `selectWithChange` switches to the first option before choosing yours, so React actually sees a change.
+Selects are worse. With an uncontrolled `<select>`, an option chosen before hydration keeps showing on the page while React's state never updates, and nothing on screen tells you. `selectWithChange` switches to a different option before choosing yours, so React actually sees a change.
 
 ## Your feedback is your assertion
 
