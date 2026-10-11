@@ -281,7 +281,7 @@ await interactUntil(
           await expect(page.getByRole("status")).toHaveText("")
         })
 
-        await test.step("Choosing the same option again does nothing, so `selectWithChange` switches to the first option before choosing the one you asked for. It takes either `{ label }` or `{ value }`.\n", async () => {
+        await test.step("Choosing the same option again does nothing, so `selectWithChange` switches to a different option before choosing the one you asked for. It takes either `{ label }` or `{ value }`.\n", async () => {
           await injectCode(
             testInfo,
             `
@@ -308,6 +308,33 @@ await interactUntil(
               }),
           )
           await expect(page.getByRole("status")).toHaveText("annex")
+        })
+      })
+
+      test("It works for the first option too", async ({ page }) => {
+        await test.step("If the option you want is the first one, `selectWithChange` switches to a different option before choosing it, so there is still a real change.\n", async () => {
+          await page.setContent(`
+            <label>Location
+              <select>
+                <option value="hq">Headquarters</option>
+                <option value="annex" selected>Annex</option>
+              </select>
+            </label>
+            <output></output>
+            ${hydrateLater(trackValue("select"))}
+          `)
+          const select = page.getByRole("combobox", { name: "Location" })
+          await select.selectOption({ label: "Headquarters" })
+          await page.waitForTimeout(HYDRATION_DELAY_MS * 1.5)
+
+          await interactUntil(
+            () => selectWithChange(select, { label: "Headquarters" }),
+            () =>
+              expect(page.getByRole("status")).toHaveText("hq", {
+                timeout: 200,
+              }),
+          )
+          await expect(select).toHaveValue("hq")
         })
       })
     })

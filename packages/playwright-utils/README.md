@@ -45,7 +45,7 @@ Use this instead of a bare `.fill()` inside `interactUntil`. React remembers the
 
 ### `selectWithChange(locator, { label } | { value })`
 
-The `<select>` version of `fillWithChange`. Uncontrolled selects (an `onChange` but no `value`) have one more trap: if an option was chosen before hydration, the DOM keeps showing it while React's state never updates, and nothing on screen tells you. Choosing the same option again does nothing. This helper switches to the first option before choosing the one you asked for.
+The `<select>` version of `fillWithChange`. Uncontrolled selects (an `onChange` but no `value`) have one more trap: if an option was chosen before hydration, the DOM keeps showing it while React's state never updates, and nothing on screen tells you. Choosing the same option again does nothing. This helper switches to a different option before choosing the one you asked for.
 
 ## `RoleSelector`
 

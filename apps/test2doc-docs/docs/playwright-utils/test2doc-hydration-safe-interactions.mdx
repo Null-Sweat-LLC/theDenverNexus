@@ -126,7 +126,7 @@ await interactUntil(
 
 Uncontrolled selects (an `onChange` but no `value`) have one more trap: if an option was chosen before hydration, the page keeps showing it while React's state never updates, and nothing on screen tells you.
 
-Choosing the same option again does nothing, so `selectWithChange` switches to the first option before choosing the one you asked for. It takes either `{ label }` or `{ value }`.
+Choosing the same option again does nothing, so `selectWithChange` switches to a different option before choosing the one you asked for. It takes either `{ label }` or `{ value }`.
 
 
 ```ts
@@ -140,5 +140,10 @@ await interactUntil(
   () => expect(page.getByRole("status")).toHaveText("annex"),
 )
 ```
+
+
+### It works for the first option too
+
+If the option you want is the first one, `selectWithChange` switches to a different option before choosing it, so there is still a real change.
 
 

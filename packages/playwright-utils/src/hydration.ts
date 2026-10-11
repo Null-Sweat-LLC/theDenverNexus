@@ -40,6 +40,17 @@ export async function selectWithChange(
   locator: Locator,
   option: { label: string } | { value: string },
 ) {
-  await locator.selectOption({ index: 0 })
+  // Switch to any other option first, so choosing `option` is a real change
+  // even when it is the first one.
+  const targetIndex = await locator.evaluate(
+    (select: HTMLSelectElement, wanted) =>
+      [...select.options].findIndex((candidate) =>
+        "label" in wanted
+          ? candidate.label === wanted.label
+          : candidate.value === wanted.value,
+      ),
+    option,
+  )
+  await locator.selectOption({ index: targetIndex === 0 ? 1 : 0 })
   await locator.selectOption(option)
 }
