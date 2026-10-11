@@ -4,7 +4,6 @@ title: "Stop Waiting for networkidle: Introducing @test2doc/playwright-utils"
 subtitle: "Playwright helpers for clicking, filling, and selecting in server-rendered React apps without the flakes"
 authors: [dethstrobe]
 tags: [testing]
-draft: true
 ---
 
 Your test clicks a button. Playwright says the click worked. Nothing happens. The test fails, you rerun it, and it passes. Classic.
