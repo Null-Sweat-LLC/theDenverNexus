@@ -17,7 +17,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Copy package files first (for better caching)
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/test2doc-playwright/package.json ./packages/test2doc-playwright/
-COPY apps/barefeed/package.json ./apps/barefeed/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
