@@ -23,20 +23,20 @@
     "@docusaurus/preset-classic": "3.10.2",
     "@mdx-js/react": "^3.1.1",
     "clsx": "^2.1.1",
-    "posthog-js": "^1.434.15",
+    "posthog-js": "^1.438.17",
     "prism-react-renderer": "^2.4.1",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "wrangler": "^4.141.0"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "wrangler": "^4.152.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260926.1",
+    "@cloudflare/workers-types": "^5.20261022.1",
     "@docusaurus/module-type-aliases": "3.10.2",
     "@docusaurus/tsconfig": "3.10.2",
     "@docusaurus/types": "3.10.2",
-    "@types/node": "^26.6.3",
+    "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
-    "dotenv": "^18.0.4",
+    "dotenv": "^18.0.9",
     "typescript": "~7.0.2"
   },
   "browserslist": {
