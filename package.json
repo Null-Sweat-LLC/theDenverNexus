@@ -25,13 +25,13 @@
     "apps/*"
   ],
   "devDependencies": {
-    "@biomejs/biome": "^2.6.2",
+    "@biomejs/biome": "^2.6.7",
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
     "@semantic-release/changelog": "^7.0.0",
     "@semantic-release/commit-analyzer": "14.0.0-beta.4",
     "@semantic-release/git": "^11.0.1",
-    "@semantic-release/github": "^12.0.10",
+    "@semantic-release/github": "^12.0.11",
     "@semantic-release/release-notes-generator": "15.0.0-beta.3",
     "husky": "^9.1.7",
     "semantic-release": "^25.0.9",
