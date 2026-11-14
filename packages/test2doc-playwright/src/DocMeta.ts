@@ -1,3 +1,12 @@
+/** Any value Docusaurus front matter (YAML) can hold. */
+export type DocusaurusHeaderValue =
+  | string
+  | number
+  | boolean
+  | null
+  | DocusaurusHeaderValue[]
+  | { [key: string]: DocusaurusHeaderValue }
+
 export interface DocusaurusHeaderConfig {
   title?: string
   description?: string
@@ -8,7 +17,7 @@ export interface DocusaurusHeaderConfig {
   keywords?: string[]
   image?: string
   // Add any other custom Docusaurus fields you might use
-  [key: string]: string | number | boolean | string[] // Allows for additional, non-defined properties
+  [key: string]: DocusaurusHeaderValue | undefined // Allows for additional, non-defined properties
 }
 
 export type metadataType = "page" | "category"

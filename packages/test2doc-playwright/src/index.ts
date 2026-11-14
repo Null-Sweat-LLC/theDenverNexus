@@ -20,6 +20,7 @@ import type {
 import type {
   DocusaurusCategoryMetadata,
   DocusaurusHeaderConfig,
+  DocusaurusHeaderValue,
   metadataType,
 } from "./DocMeta.js"
 import { activateTest2Doc } from "./DocMeta.js"
@@ -397,36 +398,7 @@ class Test2DocReporter implements Reporter {
   }
 
   private generateHeader(metadata: DocusaurusHeaderConfig): string {
-    let header = "---\n"
-    for (const [key, value] of Object.entries(metadata)) {
-      switch (typeof value) {
-        case "string":
-        case "number":
-        case "boolean":
-          header += `${key}: ${value}\n`
-          break
-        case "object":
-          if (Array.isArray(value)) {
-            header += `${key}:\n`
-            for (const item of value) {
-              header += `  - ${item}\n`
-            }
-          } else {
-            header += `${key}:\n`
-            for (const [subKey, subValue] of Object.entries(value)) {
-              header += `  ${subKey}: ${subValue}\n`
-            }
-          }
-          break
-        default:
-          writeLine(
-            `Unsupported metadata type for key "${key}": ${typeof value}`,
-          )
-          break
-      }
-    }
-    header += "---\n\n"
-    return header
+    return `---\n${renderFrontMatter(metadata, 0)}---\n\n`
   }
 
   private generateTitle(title: string, depth: number): string {
@@ -510,6 +482,33 @@ class Test2DocReporter implements Reporter {
 
     return markdown
   }
+}
+
+/**
+ * Writes front matter as YAML: nested objects become indented blocks, arrays
+ * become `- item` lines, and `null` is written literally.
+ */
+function renderFrontMatter(
+  entries: Record<string, DocusaurusHeaderValue | undefined>,
+  depth: number,
+): string {
+  const indent = "  ".repeat(depth)
+  let yaml = ""
+  for (const [key, value] of Object.entries(entries)) {
+    if (value === undefined) continue
+    if (Array.isArray(value)) {
+      yaml += `${indent}${key}:\n`
+      for (const item of value) {
+        // JSON is valid YAML, so nested arrays/objects inside a list stay inline
+        yaml += `${indent}  - ${typeof item === "object" && item !== null ? JSON.stringify(item) : item}\n`
+      }
+    } else if (typeof value === "object" && value !== null) {
+      yaml += `${indent}${key}:\n${renderFrontMatter(value, depth + 1)}`
+    } else {
+      yaml += `${indent}${key}: ${value}\n`
+    }
+  }
+  return yaml
 }
 
 function writeLine(line: string) {

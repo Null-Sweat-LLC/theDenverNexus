@@ -450,6 +450,66 @@ Given user is on login page
     )
   })
 
+  it("should write nested objects and null values in the front matter", () => {
+    const reporter = setup()
+    const suite: Suite = {
+      ...baseSuite,
+      title: "",
+      type: "root",
+      suites: [
+        {
+          ...baseSuite,
+          title: "chromium",
+          type: "project",
+          suites: [
+            {
+              ...baseSuite,
+              title: "settings.test.ts",
+              type: "file",
+              suites: [
+                {
+                  ...baseSuite,
+                  title: withDocMeta("Settings", {
+                    title: "Settings",
+                    pagination_next: null,
+                    sidebar_custom_props: {
+                      icon: "gear",
+                      badge: { text: "new", color: "green" },
+                    },
+                  }),
+                  type: "describe",
+                  suites: [],
+                  tests: [mockTestSuccess],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    reporter.onBegin(mockFullConfig, suite)
+    reporter.onEnd()
+
+    expect(readFileSync(`${tempDir}/test2doc-settings.mdx`, "utf8")).toEqual(
+      `---
+title: Settings
+pagination_next: null
+sidebar_custom_props:
+  icon: gear
+  badge:
+    text: new
+    color: green
+---
+
+# Settings
+
+## should redirect to dashboard on successful login
+
+`,
+    )
+  })
+
   describe("injectMarkdown", () => {
     it("should add markdown content inside a step", () => {
       const reporter = setup()
@@ -742,6 +802,20 @@ This is injected markdown content 2
     expect(mockLogging).toHaveBeenCalledWith("[..] 0/2 (0%)")
     expect(mockLogging).toHaveBeenCalledWith("[P.] 1/2 (50%)")
     expect(mockLogging).toHaveBeenCalledWith("[PP] 2/2 (100%)")
+  })
+
+  it("progress bar marks skipped tests with an S and still counts them", () => {
+    const reporter = setup()
+
+    reporter.onBegin(mockFullConfig, mockSingleSetupFileSuite)
+    reporter.onTestEnd(mockSetupTest, createMockTestResult())
+    reporter.onTestEnd(
+      mockAuthenticatedTest,
+      createMockTestResult({ status: "skipped" }),
+    )
+    reporter.onEnd()
+
+    expect(mockLogging).toHaveBeenCalledWith("[PS] 2/2 (100%)")
   })
 
   describe("progress bar scaling to terminal width", () => {
