@@ -1,3 +1,10 @@
+## [1.10.1](https://github.com/Null-Sweat-LLC/theDenverNexus/compare/test2doc-playwright-v1.10.0...test2doc-playwright-v1.10.1) (2026-11-14)
+
+### Bug Fixes
+
+* **test2doc-playwright:** keep attachments made as a step ends in that step ([7bff4b7](https://github.com/Null-Sweat-LLC/theDenverNexus/commit/7bff4b7fe01f9e9b56069b13bc8b13cb574ada35))
+* **test2doc-playwright:** write nested objects and null in front matter ([d9c39ae](https://github.com/Null-Sweat-LLC/theDenverNexus/commit/d9c39ae127c6a3fe082be348c89899a6fabfbfa2))
+
 ## [1.10.0](https://github.com/Null-Sweat-LLC/theDenverNexus/compare/test2doc-playwright-v1.9.0...test2doc-playwright-v1.10.0) (2026-09-26)
 
 ### Features
