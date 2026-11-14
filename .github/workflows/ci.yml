@@ -63,7 +63,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           cache: pnpm
-          node-version: "latest"
+          node-version: "lts/*"
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
@@ -105,7 +105,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           cache: pnpm
-          node-version: "latest"
+          node-version: "lts/*"
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
@@ -137,7 +137,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           cache: pnpm
-          node-version: "latest"
+          node-version: "lts/*"
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
@@ -172,7 +172,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           cache: pnpm
-          node-version: "latest"
+          node-version: "lts/*"
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
@@ -202,7 +202,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           cache: pnpm
-          node-version: "latest"
+          node-version: "lts/*"
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
@@ -247,7 +247,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           cache: pnpm
-          node-version: "latest"
+          node-version: "lts/*"
 
       - name: Java Setup
         uses: actions/setup-java@v4
@@ -312,7 +312,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           cache: pnpm
-          node-version: "latest"
+          node-version: "lts/*"
 
       - name: Java Setup
         uses: actions/setup-java@v4
@@ -382,7 +382,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           cache: pnpm
-          node-version: "latest"
+          node-version: "lts/*"
 
       - name: Java Setup
         uses: actions/setup-java@v4
@@ -452,7 +452,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           cache: pnpm
-          node-version: "latest"
+          node-version: "lts/*"
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
@@ -507,7 +507,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           cache: pnpm
-          node-version: "latest"
+          node-version: "lts/*"
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
