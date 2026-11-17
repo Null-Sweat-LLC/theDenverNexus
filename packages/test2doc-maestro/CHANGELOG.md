@@ -1,3 +1,10 @@
+## [0.2.0](https://github.com/Null-Sweat-LLC/theDenverNexus/compare/test2doc-maestro-v0.1.1...test2doc-maestro-v0.2.0) (2026-11-17)
+
+### Features
+
+* **test2doc-maestro:** add maxDiffPixelRatio to keep near-identical screenshots ([aec4389](https://github.com/Null-Sweat-LLC/theDenverNexus/commit/aec4389dff0f7f77027dab49346253ec240ea8a3))
+* **test2doc-maestro:** allow a fixed file name for a screenshot ([0e73caf](https://github.com/Null-Sweat-LLC/theDenverNexus/commit/0e73caf1a14d1f8e0da32a264da4116b28e4d1c2))
+
 ## [0.1.1](https://github.com/Null-Sweat-LLC/theDenverNexus/compare/test2doc-maestro-v0.1.0...test2doc-maestro-v0.1.1) (2026-09-30)
 
 ### Bug Fixes
