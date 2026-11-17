@@ -210,6 +210,32 @@ Keep in mind:
 - Test2Doc only cleans up files prefixed with `test2doc-`. If you rename or remove a screenshot with a fixed name, delete the old file yourself.
 - A fixed name will overwrite a handwritten file with the same name in the output directory.
 
+## Keeping screenshots stable between runs
+
+A screenshot can change by a few pixels without the page really changing, for example from font anti-aliasing on a different machine. With a [fixed file name](#setting-a-fixed-file-name), each run would rewrite the file and show up as a diff in version control.
+
+Set `maxDiffPixelRatio` on the reporter to keep the screenshot already on disk when the new one is close enough. It's the share of pixels, from `0` to `1`, that may differ. `0.01` allows 1%.
+
+```ts title="playwright-test2doc.config.ts"
+reporter: [
+  [
+    "@test2doc/playwright",
+    {
+      outputDir: "./doc/docs",
+      maxDiffPixelRatio: 0.01,
+    },
+  ],
+],
+```
+
+Things to know:
+
+- It only applies to screenshots with a fixed file name. Without one, the name comes from a hash of the image, so a changed image is always a new file.
+- If the difference is over the limit, the file is replaced as usual.
+- If the new screenshot has different dimensions, it replaces the file whatever the limit.
+- When it isn't set, any change replaces the file.
+- A kept screenshot can drift. Each run compares against the file on disk, so a series of small changes never replaces it. Delete the file, or set a lower ratio, to refresh it.
+
 ## Highlight multiple elements
 
 In the event that you need to highlight multiple elements, you can pass in an array with `MultiLocatorScreenshot` objects.
