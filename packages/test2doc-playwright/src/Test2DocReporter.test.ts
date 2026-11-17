@@ -222,8 +222,8 @@ describe("Test2DocReporter", () => {
       readFileSync(`${tempDir}/test2doc-registration-page.mdx`, "utf8"),
     ).toEqual(
       `---
-title: Registration Page Documentation
-description: The registration page for new users.
+title: "Registration Page Documentation"
+description: "The registration page for new users."
 sidebar_position: 1
 ---
 
@@ -244,12 +244,12 @@ Given user is on login page
     )
     expect(readFileSync(`${tempDir}/test2doc-login-page.mdx`, "utf8")).toEqual(
       `---
-title: Login Page Documentation
+title: "Login Page Documentation"
 keywords:
-  - login
-  - password
-  - username
-description: The different login scenarios for the login page.
+  - "login"
+  - "password"
+  - "username"
+description: "The different login scenarios for the login page."
 sidebar_position: 1
 parse_number_prefixes: true
 ---
@@ -284,8 +284,8 @@ Given user is on login page
       readFileSync(`${tempDir}/test2doc-dashboard-page.mdx`, "utf8"),
     ).toEqual(
       `---
-title: Dashboard Documentation
-description: The dashboard of todo stuff.
+title: "Dashboard Documentation"
+description: "The dashboard of todo stuff."
 sidebar_position: 2
 ---
 
@@ -493,16 +493,75 @@ Given user is on login page
 
     expect(readFileSync(`${tempDir}/test2doc-settings.mdx`, "utf8")).toEqual(
       `---
-title: Settings
+title: "Settings"
 pagination_next: null
 sidebar_custom_props:
-  icon: gear
+  icon: "gear"
   badge:
-    text: new
-    color: green
+    text: "new"
+    color: "green"
 ---
 
 # Settings
+
+## should redirect to dashboard on successful login
+
+`,
+    )
+  })
+
+  it("should quote front matter strings that contain colons", () => {
+    const reporter = setup()
+    const suite: Suite = {
+      ...baseSuite,
+      title: "",
+      type: "root",
+      suites: [
+        {
+          ...baseSuite,
+          title: "chromium",
+          type: "project",
+          suites: [
+            {
+              ...baseSuite,
+              title: "guide.test.ts",
+              type: "file",
+              suites: [
+                {
+                  ...baseSuite,
+                  title: withDocMeta("Guide", {
+                    title: "User Guide: Getting Started",
+                    description: "Note: read this first",
+                    keywords: ["setup: basics"],
+                    sidebar_custom_props: {
+                      tooltip: "Tip: start here",
+                    },
+                  }),
+                  type: "describe",
+                  suites: [],
+                  tests: [mockTestSuccess],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    reporter.onBegin(mockFullConfig, suite)
+    reporter.onEnd()
+
+    expect(readFileSync(`${tempDir}/test2doc-guide.mdx`, "utf8")).toEqual(
+      `---
+title: "User Guide: Getting Started"
+description: "Note: read this first"
+keywords:
+  - "setup: basics"
+sidebar_custom_props:
+  tooltip: "Tip: start here"
+---
+
+# Guide
 
 ## should redirect to dashboard on successful login
 
@@ -550,12 +609,12 @@ sidebar_custom_props:
         readFileSync(`${tempDir}/test2doc-login-page.mdx`, "utf8"),
       ).toEqual(
         `---
-title: Login Page Documentation
+title: "Login Page Documentation"
 keywords:
-  - login
-  - password
-  - username
-description: The different login scenarios for the login page.
+  - "login"
+  - "password"
+  - "username"
+description: "The different login scenarios for the login page."
 sidebar_position: 1
 parse_number_prefixes: true
 ---

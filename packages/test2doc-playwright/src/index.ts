@@ -486,7 +486,7 @@ class Test2DocReporter implements Reporter {
 
 /**
  * Writes front matter as YAML: nested objects become indented blocks, arrays
- * become `- item` lines, and `null` is written literally.
+ * become `- item` lines, strings are quoted, and `null` is written literally.
  */
 function renderFrontMatter(
   entries: Record<string, DocusaurusHeaderValue | undefined>,
@@ -500,15 +500,27 @@ function renderFrontMatter(
       yaml += `${indent}${key}:\n`
       for (const item of value) {
         // JSON is valid YAML, so nested arrays/objects inside a list stay inline
-        yaml += `${indent}  - ${typeof item === "object" && item !== null ? JSON.stringify(item) : item}\n`
+        yaml += `${indent}  - ${renderScalar(item)}\n`
       }
     } else if (typeof value === "object" && value !== null) {
       yaml += `${indent}${key}:\n${renderFrontMatter(value, depth + 1)}`
     } else {
-      yaml += `${indent}${key}: ${value}\n`
+      yaml += `${indent}${key}: ${renderScalar(value)}\n`
     }
   }
   return yaml
+}
+
+/**
+ * Strings and inline objects go through JSON.stringify (valid YAML) so
+ * characters like `:` or `#` can't break the front matter. Numbers, booleans
+ * and null stay bare so YAML keeps their types.
+ */
+function renderScalar(value: unknown): string {
+  return typeof value === "string" ||
+    (typeof value === "object" && value !== null)
+    ? JSON.stringify(value)
+    : String(value)
 }
 
 function writeLine(line: string) {
