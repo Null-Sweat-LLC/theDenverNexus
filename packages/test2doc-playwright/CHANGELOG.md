@@ -1,3 +1,14 @@
+## [1.11.0](https://github.com/Null-Sweat-LLC/theDenverNexus/compare/test2doc-playwright-v1.10.2...test2doc-playwright-v1.11.0) (2026-11-17)
+
+### Features
+
+* **test2doc-playwright:** add maxDiffPixelRatio to keep near-identical screenshots ([ec393af](https://github.com/Null-Sweat-LLC/theDenverNexus/commit/ec393af1055367fb904565d4724172864d8a941a))
+
+### Bug Fixes
+
+* **test2doc-playwright:** let the e2e test's child run inherit the environment ([9769b3e](https://github.com/Null-Sweat-LLC/theDenverNexus/commit/9769b3ede81aa649308e273ebd98dab397087fcb))
+* **test2doc-playwright:** use a threshold with a wide margin in the e2e test ([f279852](https://github.com/Null-Sweat-LLC/theDenverNexus/commit/f279852b8a01b5767600a254404fce52ec01b1d1))
+
 ## [1.10.2](https://github.com/Null-Sweat-LLC/theDenverNexus/compare/test2doc-playwright-v1.10.1...test2doc-playwright-v1.10.2) (2026-11-17)
 
 ### Bug Fixes
