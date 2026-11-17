@@ -1,3 +1,9 @@
+## [1.10.2](https://github.com/Null-Sweat-LLC/theDenverNexus/compare/test2doc-playwright-v1.10.1...test2doc-playwright-v1.10.2) (2026-11-17)
+
+### Bug Fixes
+
+* **test2doc-playwright:** quote user guide front matter so colons don't break the docs build ([97ba5a1](https://github.com/Null-Sweat-LLC/theDenverNexus/commit/97ba5a15b42a236ef6ce34d66feca19037f9d3c2))
+
 ## [1.10.1](https://github.com/Null-Sweat-LLC/theDenverNexus/compare/test2doc-playwright-v1.10.0...test2doc-playwright-v1.10.1) (2026-11-14)
 
 ### Bug Fixes
