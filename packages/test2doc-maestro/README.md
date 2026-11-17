@@ -88,7 +88,7 @@ lingering in the docs.
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `-i, --input <[platform[@scale]=]dir>` | The directory passed to `--test-output-dir` (required). Repeat it with a platform for each to document several platforms, and add `@scale` for iOS if needed. |
 | `-o, --output <dir>`                   | Where to write the docs (default `./docs`)                                                                                                                    |
-| `-c, --config <file>`                  | JSON with `annotationDefaults`, to style the annotations                                                                                                      |
+| `-c, --config <file>`                  | JSON with `annotationDefaults`, to style the annotations, and `maxDiffPixelRatio`, to [keep screenshots stable](#keeping-screenshots-stable-between-runs)     |
 
 ## Writing flows for docs
 
@@ -138,6 +138,55 @@ Each flow becomes `test2doc-<flow-name>.mdx`. Screenshots are copied next to it
 as `test2doc-<hash>.png`. Old `test2doc-*` files in the output directory are
 removed first, but only after every flow parsed, so a failed run keeps the
 existing docs.
+
+### Fixed screenshot file names
+
+By default a screenshot's file name comes from a hash of the image, so it
+changes whenever the screen looks even slightly different. To get the same file
+every run, set `filename` in the screenshot's own label, the same way as an
+annotation's options below. `.png` is added if it's missing, and the name can't
+contain `/` or `\`. The label is only read for its options. It is not written to the page.
+
+```yaml
+- takeScreenshot:
+    path: login-screen
+    label: 'Login [test2doc_annotation]:{"filename":"login-screen"}'
+```
+
+Notes:
+
+- Use a literal label. Maestro only resolves `${variables}` in some labels, so
+  don't count on a shared helper flow passing the name in.
+- When a flow runs on [several platforms](#several-platforms-on-one-page), the
+  platform is added to the name, so `login-screen` becomes `login-screen-android.png`
+  and `login-screen-web.png`.
+- Give each screenshot a unique name. Two screenshots with the same name overwrite each other.
+- Don't start a name with `test2doc-`, since those files are removed before each
+  run. Fixed names that don't are never removed, so delete the file yourself if you
+  rename or remove a screenshot, and avoid names that match your handwritten files.
+
+### Keeping screenshots stable between runs
+
+A screenshot can change by a few pixels without the screen really changing, such
+as from anti-aliasing. With a fixed file name, each run would rewrite the file and
+show up as a diff in version control. Set `maxDiffPixelRatio` in the config file
+to keep the screenshot already in the output when the new one is close enough. It's
+the share of pixels, from `0` to `1`, that may differ, so `0.01` allows 1%:
+
+```json
+{
+  "maxDiffPixelRatio": 0.01
+}
+```
+
+- It only applies to screenshots with a fixed file name. Hashed names change with
+  the image, so a changed image is always a new file.
+- Over the limit, or with different dimensions, the file is replaced as usual.
+- When it isn't set, any change replaces the file.
+- Each run compares against the file in the output, so a series of small changes
+  never replaces it. Delete the file to refresh it.
+- Annotations are drawn before comparing, so a moved or reworded highlight counts
+  as a change.
 
 ## Highlighting and annotating elements
 
