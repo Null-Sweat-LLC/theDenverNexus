@@ -32,17 +32,6 @@ const docsRun = (
 ): Buffer => {
   const capturePath = join(workDir, `capture-${++runCount}.png`)
 
-  // Drop the variables of the Playwright process running this test, so the
-  // child behaves like a fresh `playwright test` invocation.
-  const env = Object.fromEntries(
-    Object.entries(process.env).filter(
-      ([key]) =>
-        !key.startsWith("PW_") &&
-        !key.startsWith("PLAYWRIGHT") &&
-        key !== "TEST_WORKER_INDEX",
-    ),
-  )
-
   const result = spawnSync(
     "npx",
     ["playwright", "test", "--config", "e2e-fixture/playwright.config.ts"],
@@ -50,7 +39,7 @@ const docsRun = (
       cwd: packageRoot,
       encoding: "utf8",
       env: {
-        ...env,
+        ...process.env,
         TEST2DOC_OUTPUT_DIR: join(workDir, "docs"),
         TEST2DOC_TWEAK: tweak,
         TEST2DOC_CAPTURE_PATH: capturePath,
