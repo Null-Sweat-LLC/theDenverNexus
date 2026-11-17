@@ -15,7 +15,12 @@ import {
   screenshot,
   section,
 } from "./testUtils/commands.js"
-import { isBlue, readPng, solidPng } from "./testUtils/images.js"
+import {
+  isBlue,
+  pngWithChanged,
+  readPng,
+  solidPng,
+} from "./testUtils/images.js"
 
 const capture = () => {
   const out: string[] = []
@@ -215,6 +220,39 @@ describe("cli", () => {
       expect(
         isBlue(readPng(readFileSync(join(outputDir, png))).pixel(200, 199)),
       ).toBe(true)
+    })
+
+    it("keeps a close screenshot on disk with maxDiffPixelRatio from the file", () => {
+      const { io } = capture()
+      const config = join(
+        mkdtempSync(join(tmpdir(), "t2d-cfg-")),
+        "config.json",
+      )
+      writeFileSync(config, '{"maxDiffPixelRatio":0.05}')
+      const input = mkdtempSync(join(tmpdir(), "t2d-cli-ratio-"))
+      const flowDir = join(input, "run", "Todo CRUD")
+      mkdirSync(join(flowDir, "takeScreenshot"), { recursive: true })
+      writeFileSync(
+        join(flowDir, "commands.json"),
+        JSON.stringify([
+          section("Step"),
+          screenshot("s", 4, 'Shot [test2doc_annotation]:{"filename":"shot"}'),
+        ]),
+      )
+      // 1% of the pixels differ from what's already in the docs
+      writeFileSync(
+        join(flowDir, "takeScreenshot", "s.png"),
+        pngWithChanged(10, 10, 1),
+      )
+      mkdirSync(outputDir, { recursive: true })
+      writeFileSync(join(outputDir, "shot.png"), pngWithChanged(10, 10))
+
+      const code = run(["-i", input, "-o", outputDir, "--config", config], io)
+
+      expect(code).toBe(0)
+      expect(readFileSync(join(outputDir, "shot.png"))).toEqual(
+        pngWithChanged(10, 10),
+      )
     })
 
     it("exits 1 with the reason when the config is invalid", () => {

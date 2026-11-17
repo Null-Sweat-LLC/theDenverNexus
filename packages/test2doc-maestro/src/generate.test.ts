@@ -9,7 +9,13 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { beforeEach, describe, expect, it } from "vitest"
 import { generateDocs } from "./generate.js"
-import { isBlue, readPng, solidPng } from "./testUtils/images.js"
+import {
+  isBlue,
+  pngWithChanged,
+  readPng,
+  solidPng,
+} from "./testUtils/images.js"
+import { changedPixelRatio } from "./utils.js"
 import {
   entry,
   instruction,
@@ -192,6 +198,128 @@ describe("generateDocs", () => {
       expect(readFileSync(join(outputDir, "created-todo-web.png"))).toEqual(
         Buffer.from("w"),
       )
+    })
+  })
+
+  describe("maxDiffPixelRatio", () => {
+    const THRESHOLD = 0.05
+    const named = (name: string) =>
+      screenshot(
+        "created",
+        4,
+        `Created [test2doc_annotation]:${JSON.stringify({ filename: name })}`,
+      )
+    const base = () => pngWithChanged(10, 10)
+    const close = () => pngWithChanged(10, 10, 1) // 1% of the pixels
+    const far = () => pngWithChanged(10, 10, 10) // 10% of the pixels
+
+    const generateWith = (
+      next: Buffer,
+      maxDiffPixelRatio: number | undefined,
+      filename = "created-todo",
+    ) => {
+      resetSequence()
+      writeFlow(
+        inputDir,
+        "Todo CRUD",
+        [section("Create"), named(filename)],
+        ["created"],
+        next,
+      )
+      generateDocs({
+        inputs: [{ dir: inputDir }],
+        outputDir,
+        maxDiffPixelRatio,
+      })
+    }
+
+    it("keeps the screenshot on disk when only a few pixels changed", () => {
+      writeFileSync(join(outputDir, "created-todo.png"), base())
+      expect(changedPixelRatio(base(), close())).toBeGreaterThan(0)
+      expect(changedPixelRatio(base(), close())).toBeLessThanOrEqual(THRESHOLD)
+
+      generateWith(close(), THRESHOLD)
+
+      expect(readFileSync(join(outputDir, "created-todo.png"))).toEqual(base())
+    })
+
+    it("replaces the screenshot when the change is over the limit", () => {
+      writeFileSync(join(outputDir, "created-todo.png"), base())
+      expect(changedPixelRatio(base(), far())).toBeGreaterThan(THRESHOLD)
+
+      generateWith(far(), THRESHOLD)
+
+      expect(readFileSync(join(outputDir, "created-todo.png"))).toEqual(far())
+    })
+
+    it("replaces any changed screenshot when no limit is set", () => {
+      writeFileSync(join(outputDir, "created-todo.png"), base())
+
+      generateWith(close(), undefined)
+
+      expect(readFileSync(join(outputDir, "created-todo.png"))).toEqual(close())
+    })
+
+    it("replaces the screenshot when its size changed", () => {
+      writeFileSync(join(outputDir, "created-todo.png"), base())
+      const taller = pngWithChanged(10, 11)
+
+      generateWith(taller, THRESHOLD)
+
+      expect(readFileSync(join(outputDir, "created-todo.png"))).toEqual(taller)
+    })
+
+    it("writes the screenshot when there is none on disk yet", () => {
+      generateWith(close(), THRESHOLD)
+
+      expect(readFileSync(join(outputDir, "created-todo.png"))).toEqual(close())
+    })
+
+    it("compares each platform with its own file", () => {
+      const androidDir = mkdtempSync(join(tmpdir(), "t2d-android-"))
+      const webDir = mkdtempSync(join(tmpdir(), "t2d-web-"))
+      const steps = () => [section("Create"), named("created-todo")]
+      writeFileSync(join(outputDir, "created-todo-android.png"), base())
+      writeFileSync(join(outputDir, "created-todo-web.png"), base())
+      writeFlow(androidDir, "Todo CRUD", steps(), ["created"], close())
+      resetSequence()
+      writeFlow(webDir, "Todo CRUD", steps(), ["created"], far())
+
+      generateDocs({
+        inputs: [
+          { platform: "android", dir: androidDir },
+          { platform: "web", dir: webDir },
+        ],
+        outputDir,
+        maxDiffPixelRatio: THRESHOLD,
+      })
+
+      expect(readFileSync(join(outputDir, "created-todo-android.png"))).toEqual(
+        base(),
+      )
+      expect(readFileSync(join(outputDir, "created-todo-web.png"))).toEqual(
+        far(),
+      )
+    })
+
+    it("does not apply to screenshots without a fixed name", () => {
+      writeFlow(
+        inputDir,
+        "Todo CRUD",
+        [section("Create"), screenshot("created")],
+        ["created"],
+        close(),
+      )
+
+      generateDocs({
+        inputs: [{ dir: inputDir }],
+        outputDir,
+        maxDiffPixelRatio: THRESHOLD,
+      })
+
+      const png = readdirSync(outputDir).find((f) => f.endsWith(".png"))
+      expect(png).toMatch(/^test2doc-[0-9a-f]{12}\.png$/)
+      expect(readFileSync(join(outputDir, png ?? ""))).toEqual(close())
     })
   })
 

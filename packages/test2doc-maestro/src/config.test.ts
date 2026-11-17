@@ -25,6 +25,29 @@ describe("loadConfig", () => {
     expect(loadConfig(write("{}"))).toEqual({ annotationDefaults: {} })
   })
 
+  it("reads maxDiffPixelRatio", () => {
+    expect(loadConfig(write('{"maxDiffPixelRatio":0.01}'))).toEqual({
+      annotationDefaults: {},
+      maxDiffPixelRatio: 0.01,
+    })
+  })
+
+  it.each(["0", "1"])("accepts a maxDiffPixelRatio of %s", (ratio) => {
+    expect(
+      loadConfig(write(`{"maxDiffPixelRatio":${ratio}}`)).maxDiffPixelRatio,
+    ).toBe(Number(ratio))
+  })
+
+  it.each(['"0.1"', "-0.1", "1.5", "5", "null"])(
+    "rejects a maxDiffPixelRatio of %s, naming the file",
+    (ratio) => {
+      const file = write(`{"maxDiffPixelRatio":${ratio}}`)
+
+      expect(() => loadConfig(file)).toThrow(/maxDiffPixelRatio/)
+      expect(() => loadConfig(file)).toThrow(/config\.json/)
+    },
+  )
+
   it("fails naming the file when it cannot be read", () => {
     expect(() => loadConfig("/not/here/config.json")).toThrow(
       /\/not\/here\/config\.json/,

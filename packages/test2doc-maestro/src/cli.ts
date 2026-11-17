@@ -37,7 +37,7 @@ Options:
   -i, --input <[platform[@scale]=]dir>  Directory passed to \`maestro test --test-output-dir\`.
                                 Repeat it, with a platform for each, for several platforms. (required)
   -o, --output <dir>            Where to write the docs (default: ./docs)
-  -c, --config <file>           JSON with annotationDefaults, to style the annotations
+  -c, --config <file>           JSON with annotationDefaults and maxDiffPixelRatio
   -h, --help                    Show this help
 `
 
@@ -82,11 +82,12 @@ export const run = (argv: string[], io: CliIo): number => {
   }
 
   try {
-    const { annotationDefaults } = values.config
+    const { annotationDefaults, maxDiffPixelRatio } = values.config
       ? loadConfig(values.config)
-      : { annotationDefaults: {} }
+      : { annotationDefaults: {}, maxDiffPixelRatio: undefined }
     const { pages, screenshots, warnings } = generateDocs({
       annotationDefaults,
+      ...(maxDiffPixelRatio === undefined ? {} : { maxDiffPixelRatio }),
       inputs: values.input.map(parseInput),
       outputDir: values.output ?? "./docs",
     })

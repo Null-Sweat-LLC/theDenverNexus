@@ -44,3 +44,11 @@ export const isOrange = ([r, g, b]: Rgb) =>
 export const isBlue = ([r, g, b]: Rgb) => b > 200 && r < 60 && g < 60
 export const isRed = ([r, g, b]: Rgb) => r > 230 && g < 40 && b < 40
 export const isWhite = ([r, g, b]: Rgb) => r > 250 && g > 250 && b > 250
+
+/** A white PNG where the first `changed` pixels are black, for testing how much of an image differs */
+export const pngWithChanged = (width: number, height: number, changed = 0) => {
+  const png = new PNG({ width, height })
+  png.data.fill(255)
+  for (let i = 0; i < changed; i++) png.data.fill(0, i * 4, i * 4 + 3)
+  return PNG.sync.write(png)
+}

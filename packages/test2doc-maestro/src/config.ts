@@ -7,9 +7,14 @@ import {
 export interface Config {
   /** Styling for every annotation, which a step's own options override */
   annotationDefaults: AnnotationOptions
+  /**
+   * Keep a screenshot with a fixed file name that's already in the output when
+   * no more than this share of its pixels (0-1) changed
+   */
+  maxDiffPixelRatio?: number
 }
 
-const KEYS = ["annotationDefaults"]
+const KEYS = ["annotationDefaults", "maxDiffPixelRatio"]
 
 /** Reads a test2doc-maestro config file, which is JSON. */
 export const loadConfig = (file: string): Config => {
@@ -39,8 +44,22 @@ export const loadConfig = (file: string): Config => {
     }
   }
 
-  const { annotationDefaults } = json as { annotationDefaults?: unknown }
+  const { annotationDefaults, maxDiffPixelRatio } = json as {
+    annotationDefaults?: unknown
+    maxDiffPixelRatio?: unknown
+  }
+  if (
+    maxDiffPixelRatio !== undefined &&
+    (typeof maxDiffPixelRatio !== "number" ||
+      !(maxDiffPixelRatio >= 0 && maxDiffPixelRatio <= 1))
+  ) {
+    throw new Error(
+      `Invalid maxDiffPixelRatio in the config file ${file}: expected a number from 0 to 1`,
+    )
+  }
+
   return {
+    ...(maxDiffPixelRatio === undefined ? {} : { maxDiffPixelRatio }),
     annotationDefaults:
       annotationDefaults === undefined
         ? {}

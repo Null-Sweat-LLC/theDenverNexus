@@ -15,7 +15,7 @@ import { parseFlow } from "./parseFlow.js"
 import { renderMarkdown } from "./renderMarkdown.js"
 import { detectScale, matchTaps, parseTaps } from "./taps.js"
 import type { CommandEntry, Flow } from "./types.js"
-import { convertToKebabCase } from "./utils.js"
+import { changedPixelRatio, convertToKebabCase } from "./utils.js"
 
 export interface GenerateInput {
   /** The directory passed to `maestro test --test-output-dir` */
@@ -34,6 +34,12 @@ export interface GenerateOptions {
   outputDir: string
   /** Styling for every annotation. A step's own options override it. */
   annotationDefaults?: AnnotationOptions
+  /**
+   * Keep a screenshot with a fixed file name that's already in `outputDir`
+   * when no more than this share of its pixels (0-1) changed. Without it,
+   * any change replaces the file.
+   */
+  maxDiffPixelRatio?: number
 }
 
 export interface GenerateResult {
@@ -71,6 +77,15 @@ const fixedName = (filename: string, platform?: string) => {
   const stem = filename.replace(/\.png$/, "")
   return `${stem}${platform ? `-${convertToKebabCase(platform)}` : ""}.png`
 }
+
+const shouldKeepExisting = (
+  dest: string,
+  next: Buffer,
+  maxDiffPixelRatio: number | undefined,
+) =>
+  maxDiffPixelRatio !== undefined &&
+  existsSync(dest) &&
+  changedPixelRatio(readFileSync(dest), next) <= maxDiffPixelRatio
 
 interface Run {
   platform?: string
@@ -154,6 +169,7 @@ export const generateDocs = ({
   inputs,
   outputDir,
   annotationDefaults = {},
+  maxDiffPixelRatio,
 }: GenerateOptions): GenerateResult => {
   validateInputs(inputs)
 
@@ -195,7 +211,11 @@ export const generateDocs = ({
       page.markdown,
     )
     for (const [outputName, buffer] of page.shots) {
-      writeFileSync(join(outputDir, outputName), buffer)
+      const dest = join(outputDir, outputName)
+      // Close enough: keep the committed file so the docs don't churn
+      if (!shouldKeepExisting(dest, buffer, maxDiffPixelRatio)) {
+        writeFileSync(dest, buffer)
+      }
       screenshots.add(outputName)
     }
   }
