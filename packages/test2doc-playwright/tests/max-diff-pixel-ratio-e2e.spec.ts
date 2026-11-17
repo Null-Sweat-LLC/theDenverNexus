@@ -18,7 +18,10 @@ import pixelmatch from "pixelmatch"
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), "..")
 const FILENAME = "login.png"
-const THRESHOLD = 0.01 // 1% of pixels
+// 0.1% of the pixels. Chosen with a wide margin on both sides: the small
+// tweak changes about 0.01% and the line spacing change at least 0.8% (it
+// varies with the fonts a machine has), so neither lands near the limit.
+const THRESHOLD = 0.001
 
 type Tweak = "none" | "small-badge-color" | "tall-line-spacing"
 
