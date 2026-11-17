@@ -1,6 +1,7 @@
 The Test2Doc is a project that generates documentation based on tests, helping you keep your technical documentation automatically in sync with your code.
 
 # Test2Doc Playwright Reporter
+
 The `@test2doc/playwright` package is a [Playwright](https://playwright.dev/) reporter that generates documentation in markdown. It generates markdown files compatible with [Docusaurus](https://docusaurus.io/).
 
 ## Installation & Setup
@@ -8,9 +9,11 @@ The `@test2doc/playwright` package is a [Playwright](https://playwright.dev/) re
 ### Prerequisites
 
 #### Playwright
+
 If you don't have Playwright currently installed, you can follow [Playwright's installation guide](https://playwright.dev/docs/intro#installing-playwright). (Don't forget to run `npx playwright install` to install browsers after Playwright itself!)
 
 #### Docusaurus
+
 This reporter generates markdown files for Docusaurus. If you don't have a Docusaurus app set up yet, there is an install guide [here](https://docusaurus.io/docs/installation). If you have a monorepo, I recommend using these [instructions](https://docusaurus.io/docs/installation#monorepos).
 
 Alternatively, you can install the Docusaurus app within your current repo with:
@@ -22,6 +25,7 @@ npx create-docusaurus@latest doc classic --typescript
 This will make a `doc` directory with your Docusaurus app.
 
 ### Install the Reporter
+
 After installing Playwright, you can add the `@test2doc/playwright` with your package manager of choice:
 
 ```sh
@@ -34,6 +38,7 @@ pnpm install @test2doc/playwright -D
 ```
 
 #### Configure Playwright to work with Test2Doc's Reporter
+
 Create a new config to run Test2Doc: `playwright-test2doc.config.ts`
 
 ```ts
@@ -46,25 +51,28 @@ import { defineConfig, devices } from "@playwright/test"
  */
 export default defineConfig({
   // Test directory - adjust to match your project structure
-  testDir: './tests',
+  testDir: "./tests",
 
   // Test2Doc Reporter Configuration
   reporter: [
-    ['@test2doc/playwright', { 
-      outputDir: './doc/docs'  // Change this to your Docusaurus docs directory
-    }]
+    [
+      "@test2doc/playwright",
+      {
+        outputDir: "./doc/docs", // Change this to your Docusaurus docs directory
+      },
+    ],
   ],
 
   // Optimized settings for doc generation
   fullyParallel: false,
-  workers: 1,  // Single worker for consistent output
-  retries: 0,  // No retries needed for doc generation
+  workers: 1, // Single worker for consistent output
+  retries: 0, // No retries needed for doc generation
 
   // Use only one browser for faster doc generation
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
 
@@ -81,7 +89,7 @@ export default defineConfig({
   // Optional: Import settings from your main config
   // Uncomment and adjust the path if you want to inherit from your main config
   // ...require('./playwright.config').default,
-});
+})
 ```
 
 Replace `"./doc/docs"` with a path to the `doc` directory of your Docusaurus app.
@@ -104,13 +112,16 @@ The `TEST2DOC=true` is required to activate the test2doc metadata to pass to the
 ```
 
 ## Verify installation
+
 To verify your setup works, run `npm run doc:gen` and check that markdown files appear in your `./doc/docs` directory, or wherever you specified the output directory in the `playwright-test2doc.config.ts` file.
 
 ## Filtering Tests
+
 It is possible you may wish to opt-in some tests or opt-out other tests from doc generation. This is possible with playwright tags.
 
 ### Tag tests
-Adding tags to playwright tests is easy. See the [official docs](https://playwright.dev/docs/test-annotations#tag-tests) for more details. 
+
+Adding tags to playwright tests is easy. See the [official docs](https://playwright.dev/docs/test-annotations#tag-tests) for more details.
 
 There are a few different approaches to tagging, but for this README we're going with passing in a tag array to help support multiple tags. But if you prefer one of the other options playwright supports, feel free to use it.
 
@@ -141,11 +152,13 @@ test('test will skip doc generation', {
 ```
 
 ### Opt-in Approach
+
 **Best for:** Legacy codebases or when you want explicit control over which tests generate documentation.
 
 Run only tests with the `@test2doc` tag.
 
 #### Update package.json
+
 ```json
 {
   ...
@@ -158,11 +171,13 @@ Run only tests with the `@test2doc` tag.
 ```
 
 ### Opt-out Approach
+
 **Best for:** Tests that don't need documentation generated, like flaky tests or internal API tests.
 
 Skip tests with the `@skip-docs` tag.
 
 #### Update package.json
+
 ```json
 {
   ...
@@ -181,17 +196,20 @@ After this setup, every time you run your Playwright tests, the `@test2doc/playw
 > **Note:** Any test files with a `.setup.ts` (or `.setup.js`) extension are automatically ignored and will not generate documentation. This is to prevent Playwright global setup/auth files from appearing in your docs.
 
 ### Cleanup Step
+
 The cleanup step is designed to maintain a tidy output directory by removing outdated files and directories created by the Test2Doc reporter.
 
 The cleanup step runs after all the successful test have ran and just before generating the documentation.
 
 #### What Happens During Cleanup
+
 - **File Deletion**: Any files prefixed with `test2doc-` (e.g., `test2doc-login.md`) will be deleted from the output directory. This ensures that only the most recent documentation files are retained.
 - **Directory Management**: Directories that contain files not generated by the Test2Doc reporter will not be deleted. This prevents the loss of any handwritten documentation or other important files.
 
 **Note** It is safe to place your handwritten files in directories generated by Test2Doc. However, be mindful that if you clean up tests associated with that directory and put handwritten files into it, that the directory may become an orphan and only contain the handwritten files.
 
 ### Adding Docusaurus Page Metadata
+
 Docusaurus supports [markdown front matter](https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-content-docs#markdown-front-matter) to allow for more control of pages and to help position links in the sidebar.
 
 To add this metadata to the test2doc markdown files that are generated, use the `withDocMeta` function in your describe blocks in your test.
@@ -213,6 +231,7 @@ describe(withDocMeta("Title of Page", {
 ```
 
 ### Adding Docusaurus Category Routes
+
 Docusaurus supports grouping docs by [category](https://docusaurus.io/docs/sidebar/autogenerated#category-item-metadata).
 
 By using the `withDocCategory` function for a describe block's title, this will add the metadata to allow Test2Doc to generate a new directory and a `_category_.json` file. It will then place all subsequent describes and tests under this new route.
@@ -243,6 +262,7 @@ describe(withDocCategory("Title of Category Route", {
 ```
 
 ### Adding Screenshots
+
 To add screenshots to your documentation use the `screenshot` helper function.
 
 Screenshots will be added after the Step block's title and in the order they're generated.
@@ -263,6 +283,7 @@ test.describe(withDocMeta("describe block"), async () => {
 ```
 
 #### Highlight an element
+
 It's possible to highlight an element by passing in a locator of an element on the page.
 
 ```ts
@@ -281,6 +302,7 @@ test.describe(withDocMeta("describe block"), async () => {
 ```
 
 ##### Add a label while highlighting an element
+
 In case the highlight is not enough, you can add a label under the highlighted element.
 
 ```ts
@@ -303,6 +325,7 @@ test.describe(withDocMeta("describe block"), async () => {
 ```
 
 ##### Annotation Object Properties
+
 To style the highlight and label we expose a few properties on the `annotation` object. They're named similar to the [Canvas 2D context](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D), which is used to render the highlight and label.
 
 - **`text`**:
@@ -432,7 +455,9 @@ test.describe(withDocMeta("describe block"), async () => {
 ```
 
 ##### Configure Annotation Defaults
+
 If you want to set default values for the annotation object you can do so in your `playwright-test2doc.config.ts`. Just set the `annotationDefaults` object in the `test2doc` playwright global options. These defaults will be applied to all screenshots, but can still be overridden on a per-screenshot basis.
+
 ```ts
 import { defineConfig, ... } from "@playwright/test"
 import "@test2doc/types" // Add this import to add test2doc to the global options
@@ -460,6 +485,7 @@ export default defineConfig({
 ```
 
 #### Highlight multiple elements
+
 In the event that you need to highlight multiple elements, you can pass in an array with `MultiLocatorScreenshot` objects.
 
 The `MultiLocatorScreenshot` has 2 keys, `target`, a Playwright Locator, and options, which is a combination of `PageScreenshotOptions` and Annotation options.

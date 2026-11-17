@@ -176,5 +176,8 @@
 }
 
 .theme-code-block-highlighted-line {
-  background-color: light-dark(rgb(from var(--ifm-color-info) r g b / 0.3), rgb(from var(--ifm-color-secondary) r g b / 0.2));
+  background-color: light-dark(
+    rgb(from var(--ifm-color-info) r g b / 0.3),
+    rgb(from var(--ifm-color-secondary) r g b / 0.2)
+  );
 }

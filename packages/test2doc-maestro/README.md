@@ -84,23 +84,23 @@ site. To run both steps with one command, add a script to your `package.json`:
 Clearing `maestro-output` first keeps flows you have since deleted from
 lingering in the docs.
 
-| Option | Description |
-| --- | --- |
+| Option                                 | Description                                                                                                                                                   |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `-i, --input <[platform[@scale]=]dir>` | The directory passed to `--test-output-dir` (required). Repeat it with a platform for each to document several platforms, and add `@scale` for iOS if needed. |
-| `-o, --output <dir>` | Where to write the docs (default `./docs`) |
-| `-c, --config <file>` | JSON with `annotationDefaults`, to style the annotations |
+| `-o, --output <dir>`                   | Where to write the docs (default `./docs`)                                                                                                                    |
+| `-c, --config <file>`                  | JSON with `annotationDefaults`, to style the annotations                                                                                                      |
 
 ## Writing flows for docs
 
 The page reads like a how-to guide, built from the `label:`s in your flow. The
 flow's `name:` is the page title.
 
-| In the flow | In the docs |
-| --- | --- |
-| `runFlow` with a `label:` | A section heading (`##`) |
-| `evalScript` with a `label:` | The label, written out as markdown |
-| Any other command with a `label:` | A numbered step |
-| `takeScreenshot` | An image. After a step it is nested under that step. |
+| In the flow                       | In the docs                                          |
+| --------------------------------- | ---------------------------------------------------- |
+| `runFlow` with a `label:`         | A section heading (`##`)                             |
+| `evalScript` with a `label:`      | The label, written out as markdown                   |
+| Any other command with a `label:` | A numbered step                                      |
+| `takeScreenshot`                  | An image. After a step it is nested under that step. |
 
 Commands without a label are ignored, so assertions and setup stay out of the
 docs. Maestro has no text-only command, so put markdown on a no-op `evalScript`.
@@ -154,13 +154,13 @@ still on screen:
 - runFlow:
     label: Add a todo item
     commands:
-      - runFlow:            # takeScreenshot, behind TEST2DOC as above
+      - runFlow: # takeScreenshot, behind TEST2DOC as above
           file: screenshot.yaml
           env:
             NAME: add-before
       - tapOn:
           id: todo-input
-          label: Tap the text field at the top of the screen.   # the annotation
+          label: Tap the text field at the top of the screen. # the annotation
 ```
 
 A screenshot taken after a step shows the result and is left unmarked, and a

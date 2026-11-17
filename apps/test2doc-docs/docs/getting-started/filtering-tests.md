@@ -1,12 +1,16 @@
 ---
+
 title: Filtering Tests
 sidebar_position: 3
 ---
+
 # Filtering Tests
+
 Not all tests need to generate documentation. Filtering allows you to control which tests are included in the documentation process, making it easier to focus on the most relevant tests. You can use Playwright tags to opt-in specific tests or exclude tests that don’t need documentation.
 
 ## Tag tests
-Adding tags to Playwright tests is easy. See the [official docs](https://playwright.dev/docs/test-annotations#tag-tests) for more details. 
+
+Adding tags to Playwright tests is easy. See the [official docs](https://playwright.dev/docs/test-annotations#tag-tests) for more details.
 
 Tags are metadata you can attach to Playwright tests or describe blocks. They allow you to group tests or control their behavior. For Test2Doc, we recommend using tags like `@test2doc` to include tests in documentation and `@skip-docs` to exclude them. You can use any tagging convention that works for your project.
 
@@ -39,11 +43,13 @@ test('test will skip doc generation', {
 ```
 
 ## Opt-in Approach
+
 **Best for:** Legacy codebases or when you want explicit control over which tests generate documentation.
 
 Run only tests with the `@test2doc` tag.
 
 ### Update package.json
+
 ```json
 {
   ...
@@ -56,11 +62,13 @@ Run only tests with the `@test2doc` tag.
 ```
 
 ## Opt-out Approach
+
 **Best for:** Tests that don't need documentation generated, like flaky tests or internal API tests.
 
 Skip tests with the `@skip-docs` tag.
 
 ### Update package.json
+
 ```json
 {
   ...

@@ -24,6 +24,7 @@ npx @test2doc/playwright-passkey-gen --username alice --user-id user-123
 ```
 
 **CLI Options:**
+
 - `-o, --output <path>` - Output path for generated passkey (default: `test-passkey.ts`)
 - `-t, --type <type>` - Output file type: `json`, `ts`, `js`, `typescript`, `javascript` (default: `ts`)
 - `-u, --username <username>` - Username for the credential (default: `testuser`)
@@ -42,18 +43,18 @@ yarn add -D @test2doc/playwright-passkey-gen
 ### Programmatic API
 
 ```typescript
-import { generateTestPasskey, main } from '@test2doc/playwright-passkey-gen';
+import { generateTestPasskey, main } from "@test2doc/playwright-passkey-gen"
 
 // Generate a passkey programmatically (synchronous — no browser involved)
-const passkey = generateTestPasskey('testuser', 'user-123');
+const passkey = generateTestPasskey("testuser", "user-123")
 
 // Or use the main function with options to generate and write a file
 await main({
-  output: 'my-passkey.ts',
-  type: 'ts',
-  username: 'alice',
-  userId: 'user-123'
-});
+  output: "my-passkey.ts",
+  type: "ts",
+  username: "alice",
+  userId: "user-123",
+})
 ```
 
 ## Generated Output
@@ -69,7 +70,9 @@ export const TESTPASSKEY = {
   userHandle: "base64url-encoded-user-handle",
   privateKey: "base64url-encoded PKCS#8 (DER) private key",
   publicKey: "base64url-encoded SPKI (DER) public key",
-  cosePublicKey: [/* the same public key as COSE bytes */]
+  cosePublicKey: [
+    /* the same public key as COSE bytes */
+  ],
 }
 ```
 
@@ -80,18 +83,18 @@ export const TESTPASSKEY = {
 Seed the generated passkey directly with Playwright's native `credentials` API:
 
 ```typescript
-import { test, expect } from '@playwright/test';
-import { TESTPASSKEY } from './test-passkey';
+import { test, expect } from "@playwright/test"
+import { TESTPASSKEY } from "./test-passkey"
 
-test('authenticate with passkey', async ({ page }) => {
-  const context = page.context();
+test("authenticate with passkey", async ({ page }) => {
+  const context = page.context()
 
-  await context.credentials.create(TESTPASSKEY.rpId, TESTPASSKEY);
-  await context.credentials.install();
+  await context.credentials.create(TESTPASSKEY.rpId, TESTPASSKEY)
+  await context.credentials.install()
 
-  await page.goto('https://example.com/login');
+  await page.goto("https://example.com/login")
   // navigator.credentials.get() resolves with the seeded passkey.
-});
+})
 ```
 
 Playwright's `credentials` API is cross-browser, so this works unmodified in Chromium, Firefox, and WebKit. This package's own e2e test (`pnpm test`) runs against all three.
@@ -101,12 +104,12 @@ Playwright's `credentials` API is cross-browser, so this works unmodified in Chr
 For the login to succeed, your app has to know about the passkey too. Store `id` as the credential id and `cosePublicKey` as the public key, the same way your app stores a passkey a user registers. For example, with `@simplewebauthn/server`:
 
 ```typescript
-await db.insertInto('credentials').values({
+await db.insertInto("credentials").values({
   userId: TESTPASSKEY.userId,
   credentialId: TESTPASSKEY.id,
   publicKey: Uint8Array.from(TESTPASSKEY.cosePublicKey),
   counter: 0,
-});
+})
 ```
 
 Seeding the passkey with `credentials.create()` starts its signature counter at 0 on every run, so if your server checks the counter, reset the stored `counter` to 0 before logging in.
@@ -124,6 +127,7 @@ The bundled demo server (`pnpm start`, exercised by the e2e test) verifies a gen
 Generate a test passkey credential programmatically.
 
 **Parameters:**
+
 - `username` (string) - Username for the credential
 - `userId` (string) - User ID (should be a UUID v4)
 - `rpId` (string, optional) - Relying party id (default: `"localhost"`)
@@ -135,6 +139,7 @@ Generate a test passkey credential programmatically.
 Generate and save a test passkey file.
 
 **Parameters:**
+
 - `options` (object, optional)
   - `output` (string) - Output file path (default: `"test-passkey.ts"`)
   - `type` (string) - Output type: `"json"`, `"ts"`, `"js"`, `"typescript"`, or `"javascript"` (default: `"ts"`)

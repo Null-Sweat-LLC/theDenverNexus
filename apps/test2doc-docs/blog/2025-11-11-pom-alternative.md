@@ -1,18 +1,20 @@
 ---
+
 slug: selector-tuple-vs-page-object-model
 title: "Selector Tuple: An alternative to Page Object Model"
 authors: [dethstrobe]
 tags: [testing]
 ---
+
 A common problem in automated tests is that selectors, the way in which you select an element on a page, can change over time as development implements new features or requirements.
 {/* truncate */}
 
 ## Example
+
 So let's say we have a test like this:
 
 ```ts
 test("The app title", async ({ page }, pageInfo) => {
-
   await page.goto("/todo")
 
   const header = page.getByRole("heading", {
@@ -28,9 +30,11 @@ It's a very simple test, we get the heading element by its accessible name, and 
 In isolation, this is nothing, but when you have a few dozen tests using the same element, and we end up changing the name of the element because requirements change, this means we need to update several tests that may be in a few different files. It becomes messy and time consuming.
 
 ## Solutions for Changing Selectors
+
 Here are some popular solutions, why I think they fall short, and what I recommend instead.
 
 ### The Problem with Test IDs
+
 A popular solution is to add `testid`s to the HTML markup.
 
 ```html
@@ -40,6 +44,7 @@ A popular solution is to add `testid`s to the HTML markup.
 The problem is that testids lead to lazy testing and hides accessibility issues.
 
 #### Alternative to Test IDs
+
 So instead of using `testid` attributes on your HTML, I highly recommend using the `getByRole` method. This tests your site similar to how people interact with your site.
 
 Let's say we have a shopping cart with a button that will remove an item.
@@ -68,23 +73,26 @@ Test IDs should be the last line for being used as the selector, and should be a
 If you can't get an element by it's role or identify it, it does imply that it's not very accessible. This is not a bullet proof way to ensure your site is accessible, but it does help because you're selecting elements the same as your users are.
 
 ### The Problem with Page Object Models (POM)
+
 Another good solution to abstract away selectors and allow for easier refactoring is by creating a class that is designed to centralize this logic in one place.
 
 A Page Object Model, POM.
 
 ```ts
-import { expect, type Locator, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from "@playwright/test"
 
 export class PlaywrightDevPage {
-  readonly page: Page;
-  readonly getCreateTodoLink: Locator;
-  readonly gettingTodoHeader: Locator;
-  readonly getInputName: Locator;
-  readonly getAddTodoButton: Locator;
+  readonly page: Page
+  readonly getCreateTodoLink: Locator
+  readonly gettingTodoHeader: Locator
+  readonly getInputName: Locator
+  readonly getAddTodoButton: Locator
 
   constructor(page: Page) {
-    this.page = page;
-    this.getCreateTodoLink = page.getByRole("link", { name: "Create a new todo" })
+    this.page = page
+    this.getCreateTodoLink = page.getByRole("link", {
+      name: "Create a new todo",
+    })
     this.gettingTodoHeader = page.getByRole("heading", {
       name: "A very simple TODO app",
     })
@@ -93,11 +101,11 @@ export class PlaywrightDevPage {
   }
 
   async goto() {
-    await this.page.goto('/todo');
+    await this.page.goto("/todo")
   }
 
   async onTodoPage() {
-    await expect(this.gettingTodoHeader).toBeVisible();
+    await expect(this.gettingTodoHeader).toBeVisible()
   }
 
   async addTodo() {
@@ -143,7 +151,9 @@ test("add item to todo", async ({ page }) => {
   const po = new PlaywrightDevPage(page)
   await po.addTodo()
 
-  await expect(sharedPage.getByRole("listitem", { name: "Buy ice cream"})).toBeVisible()
+  await expect(
+    sharedPage.getByRole("listitem", { name: "Buy ice cream" }),
+  ).toBeVisible()
 })
 ```
 
@@ -152,11 +162,13 @@ Or we even hide the expect inside the POM and make the test even less readable. 
 I'm not saying, never have abstractions. But instead follow Kent C. Dodds' philosophy of [Avoid Hasty Abstractions](https://kentcdodds.com/blog/aha-programming). I am arguing that POM is inherently a **hasty abstraction**.
 
 #### Alternative to POMs
+
 So to avoid the problem with POMs instead of abstracting and hiding how the test case works in another file, instead we only focus on centralizing the arguments that are used for selecting elements.
 
 I call this pattern **Selector Tuple**.
 
 ## Selector Tuple
+
 We'll take the arguments for the `getByRole` method and put that in one place.
 
 ```ts
@@ -179,11 +191,10 @@ This pattern also can be used for other Playwright methods, like `getByLabel`, `
 Then in the test we spread the tuple into the `getByRole` calls.
 
 ```ts
-import { test, expect } from "@playwright/test";
-import { selectors } from "./selectors";
+import { test, expect } from "@playwright/test"
+import { selectors } from "./selectors"
 
 test("The app title", async ({ page }) => {
-
   await page.goto("/todo")
 
   const header = page.getByRole(...selectors.headingTodoApp)

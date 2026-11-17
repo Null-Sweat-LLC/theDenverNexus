@@ -1,10 +1,12 @@
 ---
+
 slug: maestro
 title: "Test2Doc Goes Mobile: Introducing @test2doc/maestro"
 subtitle: "Turn your Maestro flows into documentation for Android, iOS, and web"
 authors: [dethstrobe]
 tags: [testing]
 ---
+
 ![the Maestro logo](./maestro-logo.png)
 
 Test2Doc has always turned Playwright tests into documentation. That's great if your app lives in a browser. Less great if your users want a mobile app and think mobile websites are lame. (They're not lame, FYI. They're super dope.)

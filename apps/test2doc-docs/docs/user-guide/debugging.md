@@ -1,4 +1,5 @@
 ---
+
 title: Debugging Failing Doc Generation
 sidebar_position: 6
 ---
@@ -56,19 +57,23 @@ This should only be a temporary solution, as you should probably still investiga
 For more comprehensive debugging techniques, check out these official Playwright resources:
 
 ### Interactive Debugging
+
 - [Debugging Tests](https://playwright.dev/docs/debug) - Using the inspector, debug mode, and step-through debugging
 - [UI Mode](https://playwright.dev/docs/test-ui-mode) - Interactive testing with time-travel debugging
 - [Running and Debugging Tests](https://playwright.dev/docs/running-tests) - CLI options, headed mode, and slow motion
 
 ### Visual Debugging
+
 - [Trace Viewer](https://playwright.dev/docs/trace-viewer) - Recording and viewing detailed traces of test execution
 - [Screenshots and Videos](https://playwright.dev/docs/screenshots) - Capturing visual artifacts on failure
 
 ### Common Issues
+
 - [Test Timeouts](https://playwright.dev/docs/test-timeouts) - Configuring and understanding timeout errors
 - [Test Isolation](https://playwright.dev/docs/browser-contexts) - Understanding test isolation with browser contexts
 - [Locators](https://playwright.dev/docs/locators) - Best practices for reliable element selection
 
 ### Advanced
+
 - [Network](https://playwright.dev/docs/network) - Inspecting network activity and requests
 - [Test Reporters](https://playwright.dev/docs/test-reporters) - Understanding test output and logs

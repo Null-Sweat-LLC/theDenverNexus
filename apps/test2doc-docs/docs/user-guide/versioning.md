@@ -1,4 +1,5 @@
 ---
+
 title: Versioning Your Docs
 sidebar_position: 6
 ---
@@ -25,6 +26,7 @@ npx docusaurus docs:version 1.0
 ```
 
 This command:
+
 1. Copies `docs/` → `versioned_docs/version-1.0/`
 2. Copies `sidebars.ts` → `versioned_sidebars/version-1.0-sidebars.json`
 3. Adds `"1.0"` to `versions.json`

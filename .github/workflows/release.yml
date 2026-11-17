@@ -3,9 +3,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packages/test2doc-playwright/src/**'
-      - '!packages/test2doc-playwright/src/testsUtils/**'
-      - '!packages/test2doc-playwright/src/*.test.ts'
+      - "packages/test2doc-playwright/src/**"
+      - "!packages/test2doc-playwright/src/testsUtils/**"
+      - "!packages/test2doc-playwright/src/*.test.ts"
   workflow_dispatch:
 
 permissions:
@@ -39,7 +39,7 @@ jobs:
         with:
           node-version: "lts/*"
           cache: pnpm
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: "https://registry.npmjs.org"
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile

@@ -1,4 +1,5 @@
 ---
+
 title: Test Steps
 sidebar_position: 3
 ---
@@ -14,22 +15,24 @@ Test steps are documented in the order they appear in your tests:
 ```ts
 test("user login flow", async ({ page }) => {
   await test.step("Navigate to login page.\n", async () => {
-    await page.goto("/login");
-  });
+    await page.goto("/login")
+  })
 
   await test.step("Enter credentials ", async () => {
-    await page.getByRole("textbox", { name: "Username" }).fill("user@example.com");
-    await page.getByRole("textbox", { name: "Password" }).fill("password123");
-  });
+    await page
+      .getByRole("textbox", { name: "Username" })
+      .fill("user@example.com")
+    await page.getByRole("textbox", { name: "Password" }).fill("password123")
+  })
 
   await test.step("and click login button.\n", async () => {
-    await page.getByRole("button", { name: "Login" }).click();
-  });
+    await page.getByRole("button", { name: "Login" }).click()
+  })
 
   await test.step("Verify dashboard is displayed.", async () => {
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-  });
-});
+    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible()
+  })
+})
 ```
 
 :::info Rendering Markdown quirk
@@ -70,27 +73,27 @@ Sometimes you need steps in your tests that shouldn't appear in documentation, s
 test("user can view their profile", async ({ page }) => {
   await test.step("[nodoc] Seed test user data", async () => {
     // Database seeding logic
-    await seedDatabase({ user: testUser });
-  });
+    await seedDatabase({ user: testUser })
+  })
 
   await test.step("[nodoc] Authenticate user", async () => {
     // Authentication setup
-    await authenticateUser(page, testUser);
-  });
+    await authenticateUser(page, testUser)
+  })
 
   await test.step("Navigate to profile page", async () => {
-    await page.goto("/profile");
-  });
+    await page.goto("/profile")
+  })
 
   await test.step("Verify user name is displayed", async () => {
-    await expect(page.getByRole("heading", { level: 2 })).toHaveText("John Doe");
-  });
+    await expect(page.getByRole("heading", { level: 2 })).toHaveText("John Doe")
+  })
 
   await test.step("[nodoc] Clean up test data", async () => {
     // Database cleanup
-    await cleanupDatabase();
-  });
-});
+    await cleanupDatabase()
+  })
+})
 ```
 
 This generates documentation with only the relevant steps:
@@ -107,6 +110,7 @@ The `[nodoc]` steps are completely excluded from the generated documentation.
 ### When to Use `[nodoc]`
 
 Use `[nodoc]` for:
+
 - **Setup steps**: Database seeding, API configuration, or test data creation
 - **Authentication**: Login flows that are prerequisites but not the focus of the test
 - **Cleanup**: Teardown operations that restore state
@@ -145,13 +149,9 @@ Steps work seamlessly with [screenshots](./screenshots/screenshots.md). When you
 ```ts
 await test.step("Click submit button", async () => {
   const submitButton = page.getByRole("button", { name: "Submit" })
-  await screenshot(
-    testInfo,
-    submitButton,
-    {
-      altText: "Submit button location"
-    }
-  )
+  await screenshot(testInfo, submitButton, {
+    altText: "Submit button location",
+  })
   await submitButton.click()
 })
 ```

@@ -61,12 +61,15 @@ describe("placeLabel", () => {
     ["top right", { x: 1160, y: 0, width: 120, height: 30 }],
     ["bottom left", { x: 0, y: 690, width: 120, height: 30 }],
     ["bottom right", { x: 1160, y: 690, width: 120, height: 30 }],
-  ])("target in the %s corner keeps the label inside the viewport", (_, target) => {
-    const box = placeLabel({ target, label, viewport, margin })
+  ])(
+    "target in the %s corner keeps the label inside the viewport",
+    (_, target) => {
+      const box = placeLabel({ target, label, viewport, margin })
 
-    expectInsideViewport(box)
-    expectOffTarget(box, target)
-  })
+      expectInsideViewport(box)
+      expectOffTarget(box, target)
+    },
+  )
 
   test("label that only overflows along the target's edge slides back inside instead of switching sides", () => {
     const target = { x: 0, y: 300, width: 60, height: 30 }

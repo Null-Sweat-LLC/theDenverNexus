@@ -83,7 +83,7 @@ jobs:
           CI: true
 
       - name: Upload Screenshot Diffs
-        if: failure()  # Only when tests fail
+        if: failure() # Only when tests fail
         uses: actions/upload-artifact@v4
         with:
           name: screenshot-diffs-${{ github.run_number }}

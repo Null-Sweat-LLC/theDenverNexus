@@ -3,10 +3,10 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packages/test2doc-maestro/src/**'
-      - '!packages/test2doc-maestro/src/testUtils/**'
-      - '!packages/test2doc-maestro/src/*.test.ts'
-      - 'packages/test2doc-maestro/fonts/**'
+      - "packages/test2doc-maestro/src/**"
+      - "!packages/test2doc-maestro/src/testUtils/**"
+      - "!packages/test2doc-maestro/src/*.test.ts"
+      - "packages/test2doc-maestro/fonts/**"
   workflow_dispatch:
 
 permissions:
@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: "lts/*"
           cache: pnpm
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: "https://registry.npmjs.org"
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile

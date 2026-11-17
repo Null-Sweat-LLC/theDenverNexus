@@ -1,11 +1,15 @@
 ---
+
 title: Annotation
 sidebar_position: 2
 ---
+
 # Annotation
+
 This option is passed in as the third argument for the [`screenshot`](./screenshots.md) function. It allows you to customize the highlighting of elements for a screenshot.
 
 ## When to use annotation options
+
 - You want to change the color and/or outline of the highlighted element.
 - You want to add a label to help explain the screenshot:
   - You want to customize where the label is placed
@@ -14,9 +18,11 @@ This option is passed in as the third argument for the [`screenshot`](./screensh
 - You want to add an arrow to emphasize what is being highlighted
 
 ## Annotation Object Properties
+
 To style the highlight and label we expose a few properties on the `annotation` object. They're named similar to the [Canvas 2D context](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D), which is used to render the highlight and label.
 
 ### Label Styling
+
 The text that explains what is being highlighted.
 
 - **`text`**:
@@ -75,6 +81,7 @@ The text that explains what is being highlighted.
   - **Default**: `2`
 
 ### Label Box Styling
+
 A box that the label's text can appear it to make the text stand out more.
 
 - **`labelBoxFillStyle`**:
@@ -98,6 +105,7 @@ A box that the label's text can appear it to make the text stand out more.
   - **Default**: `4`
 
 ### Highlight Box Styling
+
 A box that is drawn around the element you wish to highlight.
 
 - **`highlightFillStyle`**:
@@ -116,6 +124,7 @@ A box that is drawn around the element you wish to highlight.
   - **Default**: `2`
 
 ### Positioning
+
 The location of where the label is rendered.
 
 - **`position`**:
@@ -128,6 +137,7 @@ Labels are always kept inside the screenshot and off the highlighted element. If
 Labels can still cover other parts of the page, like a sidebar. Test2Doc can't tell which parts of the page matter, so set `position` yourself in those cases.
 
 ### Arrow
+
 Used to point from the label to the element being highlighted.
 
 - **`showArrow`**:
@@ -146,6 +156,7 @@ Used to point from the label to the element being highlighted.
   - **Default**: `2`
 
 ### Example test
+
 Here's a comprehensive example showing how to use multiple annotation properties together.
 
 ```ts
@@ -181,9 +192,11 @@ test.describe(withDocMeta("describe block"), async () => {
 ```
 
 ### Example screenshot
+
 ![A screenshot showing every annotation option in use](./annotation-usage.png)
 
 ### Example of a multi-line label
+
 Longer labels can be split onto multiple lines with `\n`, or wrapped automatically with `labelMaxWidth`. Lines are aligned towards the highlighted element unless you set `textAlign`.
 
 ```ts
@@ -203,22 +216,21 @@ await screenshot(testInfo, page.getByRole("button", { name: "Submit" }), {
 Here the label is to the left of the button, so its lines are right-aligned, next to the arrow.
 
 ### Example with figure and caption
+
 When you want to provide additional context in the documentation, combine visual annotations with semantic HTML:
 
 ```ts
 test.step("Login form validation", async () => {
-  await screenshot(
-    testInfo,
-    page.getByRole("textbox", { name: "Email" }),
-    { annotation: {
+  await screenshot(testInfo, page.getByRole("textbox", { name: "Email" }), {
+    annotation: {
       text: "Email Field",
       position: "right",
       showArrow: true,
       figure: true,
-      caption: "The email input field with real-time validation"
-    }}
-  );
-});
+      caption: "The email input field with real-time validation",
+    },
+  })
+})
 ```
 
 This generates:
@@ -232,10 +244,12 @@ This generates:
 ```
 
 ### Example of `position` by number
+
 If [`position`](#positioning) is set to a number, it will render is a clockwise rotation around the highlighted element.
 <img src="/img/position-degree.png" alt="screenshot showing multiple labels around a highlighted element" width="348" height="162" />
 
 ## Configure Annotation Defaults
+
 If you want to set default values for the annotation object you can do so in your `playwright-test2doc.config.ts`. Just set the `annotationDefaults` object in the `test2doc` playwright global options. These defaults will be applied to all screenshots, but can still be overridden on a per-screenshot basis.
 
 ```ts
@@ -265,12 +279,14 @@ export default defineConfig({
 ```
 
 ## Best Practices
+
 - Use transparency in `highlightFillStyle` to avoid obscuring elements
 - Keep labels concise and descriptive
 - Test annotations on different screen sizes to ensure readability
 - Use consistent colors across your project for better branding
 
 ## Troubleshooting
+
 - **Labels not appearing**: Check that `text` is not empty
 - **Label is on a different side than `position`**: The label didn't fit on that side, so it was moved. See [Positioning](#positioning)
 - **Label is too wide**: Set `labelMaxWidth` to wrap it onto multiple lines

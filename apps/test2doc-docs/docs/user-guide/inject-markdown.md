@@ -1,4 +1,5 @@
 ---
+
 title: Inject Markdown
 sidebar_position: 5
 ---
@@ -16,7 +17,7 @@ See the [Test Steps](./test-steps.md) guide for more details on using steps with
 ## Imports
 
 ```ts
-import { injectMarkdown } from "@test2doc/playwright/injectMarkdown";
+import { injectMarkdown } from "@test2doc/playwright/injectMarkdown"
 ```
 
 ## When to use injectMarkdown
@@ -56,7 +57,6 @@ step block
 Enter your credentials to sign in.
 
 ![screenshot](./test2doc-0d5626c46ad3.png)
-
 ```
 
 ## Troubleshooting

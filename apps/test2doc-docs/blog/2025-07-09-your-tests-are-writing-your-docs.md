@@ -1,15 +1,19 @@
 ---
+
 slug: your-tests-are-writing-your-docs
 title: Your Tests Are Writing Your Docs (You Just Don't Know It Yet)
 subtitle: Test2Doc Release 0.3.2
 authors: [dethstrobe]
 tags: [development]
 ---
+
 Ever wished your documentation could write itself? What if every time you wrote a test, you automatically got beautiful, up-to-date docs with screenshots?
 
 That's exactly what [Test2Doc](https://www.npmjs.com/package/@test2doc/playwright/v/0.3.2) does - a Playwright reporter that automatically generates Docusaurus documentation from your tests - and with the latest release, we've hit MVP with three game-changing features that turn your Playwright tests into living documentation.
 {/* truncate */}
+
 ## Tired of manually organizing docs?
+
 The `withDocMeta` helper automatically generates the [frontmatter](https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-content-docs#markdown-front-matter) that controls how your pages appear in Docusaurus sidebars.
 
 ```ts
@@ -29,6 +33,7 @@ This will add the yml metadata to the top of a page to control how it displays i
 
 ```md
 ---
+
 title: Title in Sidebar
 sidebar_position: 1
 ---
@@ -36,10 +41,12 @@ sidebar_position: 1
 # Title of Page
 
 ## test block
+
 ...
 ```
 
 ## Need to group related documentation?
+
 The `withDocCategory` helper creates organized folder structures and category metadata automatically.
 
 ```ts
@@ -82,6 +89,7 @@ docs/
 ```
 
 ## Screenshots worth a thousand words?
+
 The screenshot helper captures your UI automatically and embeds it right into your docs - no more manual screenshot management.
 
 ```ts
@@ -129,6 +137,7 @@ step block
 ```
 
 ## The magic?
+
 All of this happens automatically when you run your tests. No separate documentation process, no manually updating screenshots, no forgetting to update docs when code changes.
 
 Next up: I'm taking Test2Doc for a real-world test drive by building the complete [RedwoodSDK tutorial](https://docs.rwsdk.com/tutorial/full-stack-app/setup/) using TDD + automated documentation. Stay tuned to see how this plays out in practice!
