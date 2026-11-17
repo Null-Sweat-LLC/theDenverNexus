@@ -484,6 +484,27 @@ export default defineConfig({
 })
 ```
 
+#### Keeping screenshots stable between runs
+
+Screenshots can change by a few pixels without the page really changing, for example from anti-aliasing differences between machines. To avoid rewriting the file each run, set `maxDiffPixelRatio` in the reporter options. When a screenshot with a fixed `filename` already exists and no more than this share of its pixels (`0` to `1`, so `0.01` is 1%) changed, the existing file is kept.
+
+```ts
+reporter: [
+  [
+    "@test2doc/playwright",
+    {
+      outputDir: "./doc/docs",
+      maxDiffPixelRatio: 0.01,
+    },
+  ],
+],
+```
+
+- It only applies to screenshots with a fixed `filename`. Hashed names change with the image, so a changed image is always a new file.
+- Over the limit, or with different dimensions, the file is replaced as usual.
+- When unset, any change replaces the file.
+- Each run compares against the file on disk, so a series of small changes never replaces it. Delete the file to refresh it.
+
 #### Highlight multiple elements
 
 In the event that you need to highlight multiple elements, you can pass in an array with `MultiLocatorScreenshot` objects.
