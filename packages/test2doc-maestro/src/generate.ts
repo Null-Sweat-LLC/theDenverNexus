@@ -63,6 +63,15 @@ const validateInputs = (inputs: GenerateInput[]) => {
     throw new Error(`Platform "${duplicate}" is given more than once`)
 }
 
+const hashedName = (buffer: Buffer) =>
+  `test2doc-${crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 12)}.png`
+
+/** A name from a screenshot's label. The platform is added so platforms keep their own file. */
+const fixedName = (filename: string, platform?: string) => {
+  const stem = filename.replace(/\.png$/, "")
+  return `${stem}${platform ? `-${convertToKebabCase(platform)}` : ""}.png`
+}
+
 interface Run {
   platform?: string
   flow: Flow
@@ -119,8 +128,9 @@ const readRuns = (
           }
         }
 
-        const hash = crypto.createHash("sha256").update(buffer).digest("hex")
-        const outputName = `test2doc-${hash.slice(0, 12)}.png`
+        const outputName = block.filename
+          ? fixedName(block.filename, platform)
+          : hashedName(buffer)
         files[block.path] = outputName
         shots.set(outputName, buffer)
       }

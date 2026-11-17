@@ -100,6 +100,101 @@ describe("generateDocs", () => {
     ).toContain(`![Create todo items](./${png})`)
   })
 
+  describe("fixed screenshot file names", () => {
+    const named = (name: string) =>
+      screenshot(
+        "created",
+        4,
+        `Created [test2doc_annotation]:${JSON.stringify({ filename: name })}`,
+      )
+
+    it("writes the screenshot under the name it was given", () => {
+      writeFlow(
+        inputDir,
+        "Todo CRUD",
+        [section("Create todo items"), named("created-todo")],
+        ["created"],
+      )
+
+      generateDocs({ inputs: [{ dir: inputDir }], outputDir })
+
+      expect(readdirSync(outputDir).sort()).toEqual([
+        "created-todo.png",
+        "test2doc-todo-crud.mdx",
+      ])
+      expect(readFileSync(join(outputDir, "created-todo.png"))).toEqual(PNG)
+      expect(
+        readFileSync(join(outputDir, "test2doc-todo-crud.mdx"), "utf8"),
+      ).toContain("![Create todo items](./created-todo.png)")
+    })
+
+    it("adds .png when the name does not end with it", () => {
+      writeFlow(
+        inputDir,
+        "Todo CRUD",
+        [section("Create"), named("created.png")],
+        ["created"],
+      )
+
+      generateDocs({ inputs: [{ dir: inputDir }], outputDir })
+
+      expect(readdirSync(outputDir)).toContain("created.png")
+      expect(readdirSync(outputDir)).not.toContain("created.png.png")
+    })
+
+    it("keeps the file when the docs are generated again", () => {
+      writeFlow(
+        inputDir,
+        "Todo CRUD",
+        [section("Create"), named("created-todo")],
+        ["created"],
+      )
+
+      generateDocs({ inputs: [{ dir: inputDir }], outputDir })
+      generateDocs({ inputs: [{ dir: inputDir }], outputDir })
+
+      expect(readdirSync(outputDir)).toContain("created-todo.png")
+    })
+
+    it("counts it as a screenshot", () => {
+      writeFlow(
+        inputDir,
+        "Todo CRUD",
+        [section("Create"), named("created-todo")],
+        ["created"],
+      )
+
+      const result = generateDocs({ inputs: [{ dir: inputDir }], outputDir })
+
+      expect(result.screenshots).toBe(1)
+    })
+
+    it("adds the platform to the name so platforms don't overwrite each other", () => {
+      const androidDir = mkdtempSync(join(tmpdir(), "t2d-android-"))
+      const webDir = mkdtempSync(join(tmpdir(), "t2d-web-"))
+      const steps = () => [section("Create"), named("created-todo")]
+      writeFlow(androidDir, "Todo CRUD", steps(), ["created"], Buffer.from("a"))
+      resetSequence()
+      writeFlow(webDir, "Todo CRUD", steps(), ["created"], Buffer.from("w"))
+
+      generateDocs({
+        inputs: [
+          { platform: "android", dir: androidDir },
+          { platform: "web", dir: webDir },
+        ],
+        outputDir,
+      })
+
+      expect(readdirSync(outputDir).filter((f) => f.endsWith(".png"))).toEqual([
+        "created-todo-android.png",
+        "created-todo-web.png",
+      ])
+      expect(readFileSync(join(outputDir, "created-todo-web.png"))).toEqual(
+        Buffer.from("w"),
+      )
+    })
+  })
+
   it("removes old test2doc files but leaves everything else", () => {
     writeFileSync(join(outputDir, "test2doc-stale.mdx"), "old")
     writeFileSync(join(outputDir, "intro.md"), "keep me")

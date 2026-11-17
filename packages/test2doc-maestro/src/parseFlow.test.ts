@@ -182,6 +182,59 @@ describe("parseFlow", () => {
     ).toThrow(/tapOnElement/)
   })
 
+  describe("fixed screenshot file names", () => {
+    it("takes the file name from the screenshot's label", () => {
+      const flow = parseFlow([
+        section("Add"),
+        screenshot(
+          "before",
+          4,
+          'Login screen [test2doc_annotation]:{"filename":"login-screen"}',
+        ),
+      ])
+
+      expect(flow.sections[0]?.blocks).toEqual([
+        {
+          type: "screenshot",
+          path: "takeScreenshot/before.png",
+          filename: "login-screen",
+        },
+      ])
+    })
+
+    it("has no file name when the screenshot has no label", () => {
+      const flow = parseFlow([section("Add"), screenshot("before")])
+
+      expect(flow.sections[0]?.blocks).toEqual([
+        { type: "screenshot", path: "takeScreenshot/before.png" },
+      ])
+    })
+
+    it("ignores the words of a plain label", () => {
+      const flow = parseFlow([
+        section("Add"),
+        screenshot("before", 4, "Just a label"),
+      ])
+
+      expect(flow.sections[0]?.blocks).toEqual([
+        { type: "screenshot", path: "takeScreenshot/before.png" },
+      ])
+    })
+
+    it("does not add the screenshot's label as an instruction", () => {
+      const flow = parseFlow([
+        section("Add"),
+        screenshot(
+          "before",
+          4,
+          'Login [test2doc_annotation]:{"filename":"login"}',
+        ),
+      ])
+
+      expect(flow.sections[0]?.blocks).toHaveLength(1)
+    })
+  })
+
   describe("highlights", () => {
     const at = (n: number): Bounds => ({
       left: n,

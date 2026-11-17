@@ -38,7 +38,13 @@ export interface Highlight {
 export type Block =
   | { type: "instruction"; text: string }
   | { type: "markdown"; text: string }
-  | { type: "screenshot"; path: string; highlights?: Highlight[] }
+  | {
+      type: "screenshot"
+      path: string
+      highlights?: Highlight[]
+      /** A fixed file name for the screenshot in the docs, from its label */
+      filename?: string
+    }
 
 export interface Section {
   title: string

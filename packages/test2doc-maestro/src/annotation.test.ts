@@ -95,6 +95,7 @@ describe("validateAnnotationOptions", () => {
       showArrow: true,
       arrowStrokeStyle: "red",
       arrowLineWidth: 3,
+      filename: "login-screen",
     }
 
     expect(validateAnnotationOptions(options, "test")).toEqual(options)
@@ -115,6 +116,10 @@ describe("validateAnnotationOptions", () => {
     [{ position: "sideways" }, /position/],
     [{ labelBoxPadding: -1 }, /labelBoxPadding/],
     [{ fillStyle: 3 }, /fillStyle/],
+    [{ filename: 3 }, /filename/],
+    [{ filename: "" }, /filename/],
+    [{ filename: "../escape" }, /filename/],
+    [{ filename: "a\\b" }, /filename/],
   ])("rejects %j", (options, message) => {
     expect(() => validateAnnotationOptions(options, "my config")).toThrow(
       message,

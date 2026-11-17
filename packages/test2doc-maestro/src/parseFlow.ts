@@ -52,7 +52,15 @@ export const parseFlow = (
         (artifact) => artifact.type === "TAKE_SCREENSHOT",
       )?.path
       if (path) {
-        const block: Block = { type: "screenshot", path }
+        const label = labelOf(entry, name)
+        const filename = label
+          ? parseAnnotationLabel(label).options?.filename
+          : undefined
+        const block: Block = {
+          type: "screenshot",
+          path,
+          ...(filename ? { filename } : {}),
+        }
         lastShot = { block, blocks: add(block, depth) }
       }
       continue

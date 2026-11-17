@@ -45,9 +45,10 @@ export const instruction = (label: string, depth = 2) =>
 export const markdown = (label: string, depth = 2) =>
   entry("evalScriptCommand", { depth, label })
 
-export const screenshot = (name: string, depth = 4) =>
+export const screenshot = (name: string, depth = 4, label?: string) =>
   entry("takeScreenshotCommand", {
     depth,
+    ...(label ? { label } : {}),
     artifacts: [
       { type: "TAKE_SCREENSHOT", path: `takeScreenshot/${name}.png` },
     ],

@@ -24,12 +24,19 @@ export interface AnnotationOptions {
   showArrow?: boolean // Whether to show an arrow pointing to the element
   arrowStrokeStyle?: string // Color of the arrow
   arrowLineWidth?: number // Width of the arrow line
+  filename?: string // A fixed file name for a screenshot, set on a takeScreenshot's label. ".png" is added if missing
 }
 
 /** The family of the font bundled with the package, used where others are missing */
 export const FONT_FAMILY = "Test2Doc Sans"
 
-type Kind = "string" | "number" | "boolean" | "textAlign" | "position"
+type Kind =
+  | "string"
+  | "number"
+  | "boolean"
+  | "textAlign"
+  | "position"
+  | "filename"
 
 const KINDS: Record<keyof AnnotationOptions, Kind> = {
   text: "string",
@@ -50,6 +57,7 @@ const KINDS: Record<keyof AnnotationOptions, Kind> = {
   showArrow: "boolean",
   arrowStrokeStyle: "string",
   arrowLineWidth: "number",
+  filename: "filename",
 }
 
 const isValid = (kind: Kind, value: unknown) => {
@@ -60,6 +68,8 @@ const isValid = (kind: Kind, value: unknown) => {
       return typeof value === "boolean"
     case "number":
       return typeof value === "number" && Number.isFinite(value) && value >= 0
+    case "filename":
+      return typeof value === "string" && value !== "" && !/[/\\]/.test(value)
     case "textAlign":
       return value === "left" || value === "center" || value === "right"
     case "position":
@@ -78,6 +88,7 @@ const EXPECTED: Record<Kind, string> = {
   number: "a number of 0 or more",
   boolean: "true or false",
   textAlign: '"left", "center" or "right"',
+  filename: "a non-empty name without path separators",
   position: '"above", "below", "left", "right" or a number of degrees',
 }
 
