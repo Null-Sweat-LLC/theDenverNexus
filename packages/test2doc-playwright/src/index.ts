@@ -1,7 +1,9 @@
 import crypto from "node:crypto"
 import {
+  existsSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
   rmdirSync,
   rmSync,
   statSync,
@@ -24,7 +26,7 @@ import type {
   metadataType,
 } from "./DocMeta.js"
 import { activateTest2Doc } from "./DocMeta.js"
-import { convertToKebabCase } from "./utils.js"
+import { changedPixelRatio, convertToKebabCase } from "./utils.js"
 
 interface DocNode {
   title: string
@@ -48,6 +50,8 @@ interface DocTest {
 
 interface Test2DocReporterOptions {
   outputDir?: string
+  /** Keep the screenshot already on disk when the share of changed pixels is at or below this ratio (0-1). */
+  maxDiffPixelRatio?: number | undefined
 }
 
 type ExtractDocMetadataPage = [string, DocusaurusHeaderConfig, "page"]
@@ -80,6 +84,7 @@ class Test2DocReporter implements Reporter {
   private docs: DocNode[] = []
   private docMap: Map<string, DocTest | DocNode> = new Map()
   private outputDir: string
+  private maxDiffPixelRatio: number | undefined
   private screenshotMoveQueue: DocScreenshot[] = []
   private seenScreenshot = new Set<string>()
   private seenMarkdown = new Set<string>()
@@ -93,6 +98,7 @@ class Test2DocReporter implements Reporter {
     },
   ) {
     this.outputDir = options.outputDir || "./docs"
+    this.maxDiffPixelRatio = options.maxDiffPixelRatio
   }
 
   onBegin(_config: FullConfig, suite: Suite) {
@@ -360,9 +366,19 @@ class Test2DocReporter implements Reporter {
     this.screenshotMoveQueue.forEach((screenshot) => {
       const filename = this.getScreenshotFilename(screenshot)
       const dest = `${output}/${filename}`
+      // Close enough: keep the committed file so the docs don't churn
+      if (this.shouldKeepExistingScreenshot(dest, screenshot.buffer)) return
       writeFileSync(dest, screenshot.buffer)
     })
     this.screenshotMoveQueue = []
+  }
+
+  private shouldKeepExistingScreenshot(dest: string, next: Buffer): boolean {
+    return (
+      this.maxDiffPixelRatio !== undefined &&
+      existsSync(dest) &&
+      changedPixelRatio(readFileSync(dest), next) <= this.maxDiffPixelRatio
+    )
   }
 
   private cleanupTest2DocFiles(output: string) {

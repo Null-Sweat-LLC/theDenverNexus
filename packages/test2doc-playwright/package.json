@@ -78,6 +78,10 @@
     "test": "vitest run && pnpm int && pnpm int:a",
     "unit": "vitest"
   },
+  "dependencies": {
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0"
+  },
   "peerDependencies": {
     "@playwright/test": "^1.*.*"
   },
@@ -85,8 +89,6 @@
     "@playwright/test": "^1.65.1",
     "@types/node": "^26.6.6",
     "@types/pngjs": "^6.0.5",
-    "pixelmatch": "^7.2.0",
-    "pngjs": "^7.0.0",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
   }
